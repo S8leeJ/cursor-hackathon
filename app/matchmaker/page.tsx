@@ -5,7 +5,6 @@ import {
   useUIMessages,
 } from "@convex-dev/agent/react";
 import { useConvexAuth, useMutation } from "convex/react";
-import Link from "next/link";
 import {
   useEffect,
   useMemo,
@@ -14,15 +13,20 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { BottomNav } from "@/components/BottomNav";
-import { BotIcon, HeartIcon, CheckIcon } from "@/components/icons";
+import { AppShell, PageHeader } from "@/components/AppShell";
+import {
+  CheckCircleIcon,
+  SendIcon,
+  TerminalIcon,
+} from "@/components/icons";
+import { Button, EmptyState, Key, Loading, Panel } from "@/components/ui";
 import { api } from "@/convex/_generated/api";
 
 const STARTERS = [
-  "Find me extreme-burn Cursor builders at UT Austin",
-  "Who vibes with Claude Code + night-owl energy?",
-  "I want friends-first — ask me a few questions first",
-  "Match me with someone opposite my stack",
+  "find extreme-burn Cursor builders at UT Austin",
+  "who vibes with Claude Code + night-owl energy?",
+  "friends-first — ask me a few questions first",
+  "match me with someone opposite my stack",
 ];
 
 type Question = {
@@ -103,7 +107,7 @@ export default function MatchmakerPage() {
   const visiblePending =
     pending && !answeredToolIds.includes(pending.toolCallId) ? pending : null;
 
-  // generateReply runs async after send — keep iMessage dots until a new
+  // generateReply runs async after send — keep the indicator until a new
   // assistant turn (text / search summary) or a questionnaire appears.
   const showTyping =
     !visiblePending &&
@@ -205,70 +209,73 @@ export default function MatchmakerPage() {
 
   if (authLoading) {
     return (
-      <Shell>
-        <p className="mt-20 text-center text-xs tracking-wide text-muted">
-          Loading…
-        </p>
-      </Shell>
+      <AppShell path="~/matchmaker" fill>
+        <Loading what="authenticating" />
+      </AppShell>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <Shell>
-        <Empty
+      <AppShell path="~/matchmaker" fill>
+        <EmptyState
+          glyph={<TerminalIcon className="h-5 w-5" />}
+          code="401 unauthorized"
           title="Sign in to Matchmaker"
-          body="the campus matching assistant needs your identity to search real profiles"
+          body="the agent searches real campus profiles, so it needs to know who's asking."
           href="/sign-in"
           cta="Sign in"
         />
-      </Shell>
+      </AppShell>
     );
   }
 
   return (
-    <Shell>
-      <header className="flex items-center justify-between border-b border-line pb-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <BotIcon className="h-5 w-5 text-rose" />
-            <h1 className="font-serif text-3xl text-ink">Matchmaker</h1>
-          </div>
-          <p className="mt-1 text-[11px] tracking-wide text-muted">
-            RAG over campus profiles · ask, pick, get matched
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
+    <AppShell
+      path="~/matchmaker"
+      fill
+      status={
+        <span className="flex items-center gap-1.5">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${showTyping ? "bg-pending" : "bg-added"}`}
+          />
+          {showTyping ? "thinking" : "ready"}
+        </span>
+      }
+    >
+      <PageHeader
+        crumb="swender / matchmaker"
+        title="Matchmaker"
+        meta="RAG over campus profiles · no invented people"
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => void onClearHistory()}
             disabled={!threadId || clearing || sending}
-            className="rounded-full border border-line-bright px-3 py-1.5 text-[10px] tracking-wide text-muted transition hover:border-rose hover:text-rose disabled:opacity-40"
           >
-            {clearing ? "Clearing…" : "Clear chat"}
-          </button>
-          <span className="rounded-full border border-line-bright px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-rose">
-            agent
-          </span>
-        </div>
-      </header>
+            {clearing ? "clearing…" : "clear"}
+          </Button>
+        }
+      />
 
       {threadError && (
-        <p className="mt-3 rounded-xl border border-line-bright bg-wine/20 px-3 py-2 text-xs text-blush">
+        <p
+          role="alert"
+          className="mt-3 rounded-sm border border-deleted/40 bg-deleted/10 px-3 py-2 text-[11px] text-deleted"
+        >
           {threadError}
         </p>
       )}
 
-      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-3">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-2">
         {!threadId ? (
-          <p className="mt-10 text-center text-xs tracking-wide text-muted">
-            Spinning up your thread…
-          </p>
+          <Loading what="spinning up thread" />
         ) : (messages?.length ?? 0) === 0 && !showTyping ? (
           <Welcome onPick={(t) => void send(t)} disabled={sending} />
         ) : (
           (messages ?? []).map((msg) => (
-            <MessageBubble key={msg.key} message={msg} />
+            <TranscriptEntry key={msg.key} message={msg} />
           ))
         )}
 
@@ -279,19 +286,19 @@ export default function MatchmakerPage() {
           />
         )}
 
-        {showTyping && <TypingBubble />}
+        {showTyping && <Thinking />}
 
         {status === "LoadingMore" && (
-          <p className="text-center text-[10px] text-faint">Loading earlier…</p>
+          <p className="text-center text-[10px] text-ink-4">loading earlier…</p>
         )}
         <div ref={bottomRef} />
       </div>
 
-      <form
-        onSubmit={onSubmit}
-        className="border-t border-line bg-background/95 pt-3"
-      >
-        <div className="flex items-end gap-2 rounded-2xl border border-line bg-card px-3 py-2 focus-within:border-line-bright">
+      <form onSubmit={onSubmit} className="shrink-0 border-t border-rule pt-3">
+        <div className="flex items-end gap-2 rounded-sm border border-rule bg-inset px-2.5 py-1.5 transition-colors duration-150 focus-within:border-fn/50">
+          <span aria-hidden className="pb-2.5 text-[13px] leading-none text-kw">
+            ❯
+          </span>
           <textarea
             ref={inputRef}
             value={draft}
@@ -301,28 +308,31 @@ export default function MatchmakerPage() {
             placeholder={
               visiblePending
                 ? "answer the questionnaire above…"
-                : "ask Matchmaker who to meet…"
+                : "who should you meet?"
             }
             disabled={!threadId || sending || !!visiblePending}
-            className="max-h-28 min-h-[40px] flex-1 resize-none bg-transparent py-2 text-sm leading-relaxed text-ink placeholder:text-faint focus:outline-none disabled:opacity-50"
+            className="max-h-28 min-h-9 flex-1 resize-none bg-transparent py-2 text-[12.5px] leading-relaxed text-ink placeholder:text-ink-4 focus:outline-none focus-visible:shadow-none disabled:opacity-50"
           />
-          <button
+          <Button
             type="submit"
-            disabled={
-              !threadId || sending || !!visiblePending || !draft.trim()
-            }
-            className="mb-1 rounded-full bg-wine px-4 py-2 text-xs font-semibold tracking-wide text-ink transition enabled:hover:bg-wine-hover disabled:opacity-40"
+            aria-label="Send"
+            disabled={!threadId || sending || !!visiblePending || !draft.trim()}
+            className="mb-0.5 h-8 w-8 px-0"
           >
-            {sending ? "…" : "Send"}
-          </button>
+            <SendIcon className="h-4 w-4" />
+          </Button>
         </div>
-        <p className="mt-2 text-center text-[10px] tracking-wide text-faint">
-          enter to send · shift+enter for newline
+        <p className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-ink-4">
+          <Key>↵</Key> send
+          <span className="text-ink-4/50">·</span>
+          <Key>⇧↵</Key> newline
         </p>
       </form>
-    </Shell>
+    </AppShell>
   );
 }
+
+/* ------------------------------- Transcript ------------------------------- */
 
 function Welcome({
   onPick,
@@ -332,25 +342,38 @@ function Welcome({
   disabled: boolean;
 }) {
   return (
-    <div className="float-up flex flex-1 flex-col items-center justify-center px-2 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-line-bright bg-card text-rose">
-        <BotIcon className="h-8 w-8" />
+    <div className="rise flex flex-1 flex-col justify-center">
+      <div className="border-l-2 border-kw/40 pl-3">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-kw">
+          matchmaker v1
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-ink">
+          I ask a few quick questions, then search real campus profiles with RAG.
+        </p>
+        <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-3">
+          No invented people, no vibes-only guesses — every name comes back with
+          the fingerprint it matched on.
+        </p>
       </div>
-      <p className="mt-5 font-serif text-2xl text-ink">Who should you meet?</p>
-      <p className="mt-2 max-w-64 text-xs leading-relaxed tracking-wide text-muted">
-        I&apos;ll ask a few quick questions, then search real campus profiles
-        with RAG — no invented people.
+
+      <p className="mt-6 text-[10px] uppercase tracking-[0.2em] text-ink-4">
+        try
       </p>
-      <div className="mt-8 flex w-full flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-1.5">
         {STARTERS.map((s) => (
           <button
             key={s}
             type="button"
             disabled={disabled}
             onClick={() => onPick(s)}
-            className="rounded-xl border border-line bg-card px-4 py-3 text-left text-[12px] leading-snug text-ink transition hover:border-line-bright disabled:opacity-50"
+            className="group flex items-start gap-2 rounded-sm border border-rule bg-panel px-3 py-2.5 text-left transition-colors duration-150 hover:border-rule-strong hover:bg-raised disabled:opacity-50"
           >
-            {s}
+            <span className="text-[12px] leading-relaxed text-ink-4 transition-colors group-hover:text-kw">
+              ❯
+            </span>
+            <span className="text-[12px] leading-relaxed text-ink-2 transition-colors group-hover:text-ink">
+              {s}
+            </span>
           </button>
         ))}
       </div>
@@ -397,29 +420,35 @@ function hasNewAssistantSince(
   return false;
 }
 
-function TypingBubble() {
+function AgentLabel({ children }: { children?: React.ReactNode }) {
   return (
-    <div
-      className="float-up flex justify-start"
-      aria-live="polite"
-      aria-label="Matchmaker is typing"
-    >
-      <div className="rounded-2xl rounded-bl-md border border-line bg-card px-4 py-3">
-        <p className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.25em] text-rose">
-          <BotIcon className="h-3 w-3" />
-          matchmaker
-        </p>
-        <div className="flex h-4 items-center gap-1.5 px-0.5">
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-rose" />
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-rose" />
-          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-rose" />
-        </div>
-      </div>
+    <p className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.2em] text-kw">
+      <TerminalIcon className="h-3 w-3" />
+      matchmaker
+      {children}
+    </p>
+  );
+}
+
+function Thinking() {
+  return (
+    <div className="rise" aria-live="polite" aria-label="Matchmaker is thinking">
+      <AgentLabel>
+        <span className="ml-1 flex gap-1">
+          <span className="blip h-1 w-1 rounded-full bg-kw" />
+          <span className="blip h-1 w-1 rounded-full bg-kw" />
+          <span className="blip h-1 w-1 rounded-full bg-kw" />
+        </span>
+      </AgentLabel>
     </div>
   );
 }
 
-function MessageBubble({
+/**
+ * A transcript, not chat bubbles: your lines are shell prompts, the agent's
+ * are output blocks, and tool calls read as the commands they are.
+ */
+function TranscriptEntry({
   message,
 }: {
   message: {
@@ -433,34 +462,33 @@ function MessageBubble({
   const isUser = message.role === "user";
   const text = messageText(message);
 
-  // Hide pure tool-result / empty assistant shells
   if (!isUser && !text.trim() && !hasVisibleToolSummary(message.parts)) {
     return null;
   }
 
+  if (isUser) {
+    return (
+      <div className="rise flex gap-2">
+        <span aria-hidden className="text-[12.5px] leading-relaxed text-kw">
+          ❯
+        </span>
+        <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink">
+          {text}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`float-up flex ${isUser ? "justify-end" : "justify-start"}`}
-    >
-      <div
-        className={`max-w-[88%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${
-          isUser
-            ? "rounded-br-md bg-wine text-ink"
-            : "rounded-bl-md border border-line bg-card text-ink"
-        }`}
-      >
-        {!isUser && (
-          <p className="mb-1.5 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.25em] text-rose">
-            <BotIcon className="h-3 w-3" />
-            matchmaker
+    <div className="rise">
+      <AgentLabel />
+      <div className="mt-1.5 border-l-2 border-kw/30 pl-3">
+        {text.trim() && (
+          <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink-2">
+            {text}
           </p>
         )}
-        {text.trim() ? (
-          <p className="whitespace-pre-wrap">{text}</p>
-        ) : (
-          <ToolSummaries parts={message.parts} />
-        )}
-        {text.trim() && <ToolSummaries parts={message.parts} />}
+        <ToolSummaries parts={message.parts} />
       </div>
     </div>
   );
@@ -491,20 +519,31 @@ function ToolSummaries({
     <div className="mt-2 space-y-1">
       {searches.map((p, i) => {
         const input = p.input as { query?: string } | undefined;
-        const state = p.state as string | undefined;
+        const done = (p.state as string | undefined) === "output-available";
         return (
-          <p
-            key={i}
-            className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 font-mono text-[10px] text-muted"
-          >
-            {state === "output-available" ? "searched" : "searching"} people
-            {input?.query ? `: “${input.query}”` : ""}
+          <p key={i} className="flex items-center gap-1.5 text-[10.5px]">
+            <span className="text-ink-4">$</span>
+            <span className="text-cmt">search --people</span>
+            {input?.query && (
+              <span className="truncate text-str">&quot;{input.query}&quot;</span>
+            )}
+            {done ? (
+              <CheckCircleIcon className="h-3 w-3 shrink-0 text-added" />
+            ) : (
+              <span className="flex shrink-0 gap-0.5">
+                <span className="blip h-1 w-1 rounded-full bg-pending" />
+                <span className="blip h-1 w-1 rounded-full bg-pending" />
+                <span className="blip h-1 w-1 rounded-full bg-pending" />
+              </span>
+            )}
           </p>
         );
       })}
     </div>
   );
 }
+
+/* ------------------------------ Questionnaire ----------------------------- */
 
 function QuestionnaireCard({
   pending,
@@ -549,55 +588,69 @@ function QuestionnaireCard({
   };
 
   return (
-    <div className="float-up rounded-2xl border border-line-bright bg-gradient-to-b from-[#1d0b11] to-card p-4 shadow-[0_0_30px_rgba(124,29,49,0.25)]">
-      <p className="text-[9px] uppercase tracking-[0.3em] text-rose">
-        questionnaire
-      </p>
-      <h2 className="mt-1 font-serif text-xl text-ink">{pending.title}</h2>
+    <Panel
+      filename="questionnaire.json"
+      modified
+      className="rise"
+      bodyClassName="p-3.5"
+    >
+      <h2 className="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">
+        {pending.title}
+      </h2>
 
-      <div className="mt-4 space-y-5">
+      <div className="mt-4 space-y-4">
         {pending.questions.map((q) => (
-          <div key={q.id}>
-            <p className="text-[12px] leading-snug text-ink">{q.prompt}</p>
+          <fieldset key={q.id}>
+            <legend className="text-[11.5px] leading-snug text-ink-2">
+              {q.prompt}
+            </legend>
             {q.allowMultiple && (
-              <p className="mt-1 text-[10px] text-faint">pick any that apply</p>
+              <p className="mt-1 text-[10px] text-ink-4">pick any that apply</p>
             )}
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-col gap-1">
               {q.options.map((opt) => {
                 const on = (selected[q.id] ?? []).includes(opt.id);
+                // Checkbox glyphs a CS student already reads: [x] and (o).
+                const glyph = q.allowMultiple
+                  ? on
+                    ? "[x]"
+                    : "[ ]"
+                  : on
+                    ? "(o)"
+                    : "( )";
                 return (
                   <button
                     key={opt.id}
                     type="button"
                     onClick={() => toggle(q, opt.id)}
-                    className={`rounded-lg border px-3 py-2 text-[11px] transition ${
+                    aria-pressed={on}
+                    className={`flex items-center gap-2 rounded-xs px-2 py-1.5 text-left text-[11.5px] transition-colors duration-150 ${
                       on
-                        ? "border-rose bg-wine/40 text-ink"
-                        : "border-line bg-black/30 text-muted hover:border-line-bright"
+                        ? "bg-kw/10 text-ink"
+                        : "text-ink-3 hover:bg-raised hover:text-ink-2"
                     }`}
                   >
-                    {on && (
-                      <CheckIcon className="mr-1 inline h-3 w-3 text-rose" />
-                    )}
+                    <span className={on ? "text-kw" : "text-ink-4"}>
+                      {glyph}
+                    </span>
                     {opt.label}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </fieldset>
         ))}
       </div>
 
-      <button
-        type="button"
+      <Button
+        size="lg"
         disabled={!allAnswered || submitting}
         onClick={submit}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-wine py-3 text-sm font-semibold tracking-wide text-ink transition enabled:hover:bg-wine-hover disabled:opacity-40"
+        className="mt-4 w-full"
       >
-        <HeartIcon filled className="h-4 w-4" />
-        {submitting ? "Sending…" : "Submit answers"}
-      </button>
-    </div>
+        {submitting ? "sending…" : "Submit answers"}
+      </Button>
+    </Panel>
   );
 }
 
@@ -648,43 +701,4 @@ function findPendingQuestionnaire(
     }
   }
   return null;
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
-      <main className="flex min-h-0 flex-1 flex-col px-5 pb-3 pt-6">
-        {children}
-      </main>
-      <BottomNav />
-    </div>
-  );
-}
-
-function Empty({
-  title,
-  body,
-  href,
-  cta,
-}: {
-  title: string;
-  body: string;
-  href: string;
-  cta: string;
-}) {
-  return (
-    <div className="mt-16 flex flex-col items-center text-center">
-      <BotIcon className="h-12 w-12 text-line-bright" />
-      <h1 className="mt-5 font-serif text-3xl text-ink">{title}</h1>
-      <p className="mt-3 max-w-64 text-xs leading-relaxed tracking-wide text-muted">
-        {body}
-      </p>
-      <Link
-        href={href}
-        className="mt-6 rounded-full bg-wine px-8 py-3 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-      >
-        {cta}
-      </Link>
-    </div>
-  );
 }

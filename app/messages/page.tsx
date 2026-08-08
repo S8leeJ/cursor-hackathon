@@ -1,11 +1,14 @@
 "use client";
 
 import { useConvexAuth, useQuery } from "convex/react";
-import Link from "next/link";
-import { BottomNav } from "@/components/BottomNav";
-import { HeartIcon, MailIcon } from "@/components/icons";
+import { AppShell, PageHeader } from "@/components/AppShell";
+import { CommentIcon } from "@/components/icons";
+import { Avatar } from "@/components/Identicon";
+import { EmptyState, Loading, Panel } from "@/components/ui";
 import { api } from "@/convex/_generated/api";
-import { agentLabel, gradientForId } from "@/lib/swender";
+import { agentLabel, handleOf, stableAgo } from "@/lib/swender";
+
+const MAX_OPEN = 3;
 
 export default function Messages() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
@@ -15,104 +18,106 @@ export default function Messages() {
     isAuthenticated && me?.hasFingerprint ? {} : "skip",
   );
 
-  return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <main className="flex-1 px-5 pb-4 pt-6">
-        <h1 className="font-serif text-4xl text-ink">Messages</h1>
+  const loading = authLoading || (isAuthenticated && me === undefined);
+  const open = Math.min(matches?.length ?? 0, MAX_OPEN);
 
-        {authLoading || (isAuthenticated && me === undefined) ? (
-          <p className="mt-16 text-center text-xs tracking-wide text-muted">
-            Loading…
-          </p>
-        ) : !isAuthenticated ? (
-          <Empty
-            body="sign in to open twin threads"
-            href="/sign-in"
-            cta="Sign in"
-          />
-        ) : matches === undefined ? (
-          <p className="mt-16 text-center text-xs tracking-wide text-muted">
-            Loading…
-          </p>
-        ) : matches.length === 0 ? (
-          <Empty
-            body="inbox zero — but not the good kind. match with someone first."
-            href="/discover"
-            cta="Find matches"
-          />
-        ) : (
-          <div className="mt-6 flex flex-col gap-2">
-            {matches.map((p, i) => {
-              const agent = p.preferredAgents[0]
-                ? agentLabel(p.preferredAgents[0])
-                : "agent";
-              return (
-                <button
-                  key={p._id}
-                  type="button"
-                  className="float-up flex items-center gap-4 rounded-2xl border border-line bg-card px-4 py-3.5 text-left transition hover:border-line-bright"
-                >
-                  <span
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line-bright bg-gradient-to-b ${gradientForId(p._id)} font-serif text-xl text-blush`}
-                  >
-                    {p.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.avatarUrl}
-                        alt={p.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      p.name.charAt(0).toUpperCase()
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate font-serif text-lg text-ink">
-                        {p.name}
-                      </span>
-                      <span className="shrink-0 text-[10px] text-faint">
-                        {i + 1}m
-                      </span>
+  return (
+    <AppShell
+      path="~/threads"
+      status={
+        matches?.length ? (
+          <span>
+            {open}/{MAX_OPEN} open
+          </span>
+        ) : undefined
+      }
+    >
+      <PageHeader
+        crumb="swender / threads"
+        title="Threads"
+        meta={
+          matches?.length
+            ? `${open} of ${MAX_OPEN} open — archive one to start another`
+            : "conversations open after a merge"
+        }
+      />
+
+      {loading ? (
+        <Loading what="opening threads" />
+      ) : !isAuthenticated ? (
+        <EmptyState
+          glyph={<CommentIcon className="h-5 w-5" />}
+          code="401 unauthorized"
+          title="Sign in to open threads"
+          body="threads unlock between people who approved each other's PR."
+          href="/sign-in"
+          cta="Sign in"
+        />
+      ) : matches === undefined ? (
+        <Loading what="opening threads" />
+      ) : matches.length === 0 ? (
+        <EmptyState
+          glyph={<CommentIcon className="h-5 w-5" />}
+          code="inbox zero"
+          title="No threads open"
+          body="inbox zero, but not the good kind. merge with someone first and a thread appears here."
+          href="/discover"
+          cta="Review open PRs"
+        />
+      ) : (
+        <Panel
+          filename="threads · 3 max"
+          className="mt-5"
+          bodyClassName="divide-y divide-rule"
+        >
+          {matches.map((p, i) => {
+            const agent = p.preferredAgents[0]
+              ? agentLabel(p.preferredAgents[0])
+              : "your agent";
+            const unread = i === 0;
+            return (
+              <button
+                key={p._id}
+                type="button"
+                className="rise flex w-full items-center gap-3 px-3 py-3 text-left transition-colors duration-150 hover:bg-raised"
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              >
+                <Avatar
+                  id={p._id}
+                  name={p.name}
+                  src={p.avatarUrl}
+                  size={40}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className="truncate text-[13px] font-semibold tracking-[-0.01em] text-ink">
+                      {p.name}
                     </span>
-                    <span className="mt-0.5 block truncate text-xs text-muted">
+                    <span className="truncate text-[10px] text-ink-4">
+                      @{handleOf(p.name)}
+                    </span>
+                    <span className="ml-auto shrink-0 text-[10px] text-ink-4">
+                      {stableAgo(p._id)}
+                    </span>
+                  </span>
+                  <span className="mt-1 flex items-center gap-2">
+                    <span
+                      className={`min-w-0 flex-1 truncate text-[11.5px] ${unread ? "text-ink-2" : "text-ink-3"}`}
+                    >
                       are you a {agent} enjoyer? because same
                     </span>
+                    {unread && (
+                      <span className="shrink-0 rounded-full bg-added/14 px-1.5 py-0.5 text-[10px] font-semibold text-added">
+                        +1
+                      </span>
+                    )}
                   </span>
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-rose" />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </main>
-      <BottomNav />
-    </div>
-  );
-}
-
-function Empty({
-  body,
-  href,
-  cta,
-}: {
-  body: string;
-  href: string;
-  cta: string;
-}) {
-  return (
-    <div className="mt-16 flex flex-col items-center text-center">
-      <MailIcon className="h-12 w-12 text-line-bright" />
-      <p className="mt-5 max-w-64 text-xs leading-relaxed tracking-wide text-muted">
-        {body}
-      </p>
-      <Link
-        href={href}
-        className="mt-6 flex items-center gap-2 rounded-full bg-wine px-8 py-3 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-      >
-        <HeartIcon filled className="h-4 w-4" />
-        {cta}
-      </Link>
-    </div>
+                </span>
+              </button>
+            );
+          })}
+        </Panel>
+      )}
+    </AppShell>
   );
 }

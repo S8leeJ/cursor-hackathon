@@ -20,9 +20,15 @@ export type Persona = {
   tagline: string;
 };
 
-/** [tokenKind, text] — rendered with syntax colors by CodePicture. */
+/** [tokenKind, text] — rendered with syntax colors by CodePane. */
 export type CodeToken = [string, string];
 export type CodeLine = CodeToken[];
+
+/** A source line, optionally staged as an added/removed diff line. */
+export type CodeRow = { tokens: CodeLine; mark?: "add" | "del" };
+
+export type CheckStatus = "pass" | "pending" | "fail";
+export type Check = { name: string; status: CheckStatus; detail: string };
 
 export const AGENTS = [
   { id: "cursor", label: "Cursor" },
@@ -124,21 +130,94 @@ export function computePersona(a: {
   };
 }
 
-const GRADIENTS = [
-  "from-[#2a0f16] via-[#1c0b12] to-[#0e050a]",
-  "from-[#1a0e20] via-[#140a16] to-[#0d0610]",
-  "from-[#20130a] via-[#180e08] to-[#0e0805]",
-  "from-[#0e1a1c] via-[#0a1213] to-[#060c0d]",
-  "from-[#1c0a14] via-[#150810] to-[#0e050a]",
-  "from-[#12181f] via-[#0d1218] to-[#070a0e]",
+/** Deterministic 32-bit hash — everything cosmetic keyed off an id uses this. */
+function hash(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Identity colors come from the syntax palette, so a person's accent reads as
+ * a token type rather than as decoration.
+ */
+const IDENTITY_COLORS = [
+  "var(--fn)",
+  "var(--type)",
+  "var(--num)",
+  "var(--str)",
+  "var(--kw)",
+  "var(--added)",
 ];
 
-export function gradientForId(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash + id.charCodeAt(i) * (i + 1)) % GRADIENTS.length;
+export function accentForId(id: string): string {
+  return IDENTITY_COLORS[hash(id) % IDENTITY_COLORS.length]!;
+}
+
+/** A GitHub-style identicon: the native avatar of someone with no photo. */
+export function identiconFor(id: string): boolean[][] {
+  const h = hash(id);
+  const grid: boolean[][] = [];
+  for (let row = 0; row < 5; row++) {
+    const cells: boolean[] = [];
+    for (let col = 0; col < 3; col++) {
+      cells.push(((h >>> (row * 3 + col)) & 1) === 1);
+    }
+    grid.push([cells[0]!, cells[1]!, cells[2]!, cells[1]!, cells[0]!]);
   }
-  return GRADIENTS[hash] ?? GRADIENTS[0]!;
+  return grid;
+}
+
+/** Stable PR number so the same person is always the same pull request. */
+export function prNumberFor(id: string): number {
+  return (hash(id) % 900) + 100;
+}
+
+export function shortHashFor(id: string): string {
+  return hash(id).toString(16).padStart(8, "0").slice(0, 7);
+}
+
+/** Deterministic relative time — keeps the log looking lived-in. */
+export function stableAgo(id: string): string {
+  const buckets = ["4m", "22m", "1h", "3h", "6h", "9h", "1d", "2d"];
+  return buckets[hash(id) % buckets.length]!;
+}
+
+/**
+ * Match confidence as a CI check run. A naked "87% fit" tells you nothing;
+ * three named checks tell you *what* matched.
+ */
+export function checksForProfile(profile: {
+  _id: string;
+  matchScore: number;
+  preferredAgents: string[];
+  typicalTokenBurn: TokenBurnBand;
+}): Check[] {
+  const h = hash(profile._id);
+  const fit = Math.round(profile.matchScore * 100);
+  const overlapHours = 2 + (h % 5);
+  const sharedAgents = profile.preferredAgents.length;
+
+  return [
+    {
+      name: "fingerprint/similarity",
+      status: fit >= 55 ? "pass" : "pending",
+      detail: `${fit}%`,
+    },
+    {
+      name: "schedule/overlap",
+      status: overlapHours >= 3 ? "pass" : "pending",
+      detail: `${overlapHours}h/wk`,
+    },
+    {
+      name: "stack/compatible",
+      status: sharedAgents > 0 ? "pass" : "fail",
+      detail: sharedAgents > 1 ? `${sharedAgents} agents` : "1 agent",
+    },
+  ];
 }
 
 export function dominantModel(mix: ModelMix): string {
@@ -192,12 +271,20 @@ function handleFor(name: string): string {
  * A profile's fingerprint rendered as source code. Used as the card visual
  * when a profile has no avatar to show.
  */
+export function handleOf(name: string): string {
+  return handleFor(name);
+}
+
+/**
+ * The fingerprint rendered as a staged diff — the two lines that actually
+ * decide compatibility are the added ones, so the eye lands there first.
+ */
 export function snippetForProfile(profile: {
   name: string;
   preferredAgents: string[];
   modelMix: ModelMix;
   typicalTokenBurn: TokenBurnBand;
-}): CodeLine[] {
+}): CodeRow[] {
   const handle = handleFor(profile.name);
   const model = dominantModel(profile.modelMix);
   const pct = Math.round(
@@ -212,29 +299,41 @@ export function snippetForProfile(profile: {
   });
 
   return [
-    [
-      ["kw", "const"],
-      ["plain", ` ${handle} = {`],
-    ],
-    [["plain", "  agents: ["], ...agentTokens, ["plain", "],"]],
-    [
-      ["plain", "  model: "],
-      ["str", `"${model.toLowerCase()}"`],
-      ["plain", ", "],
-      ["cmt", `// ${pct}%`],
-    ],
-    [
-      ["plain", "  burn: "],
-      ["str", `"${profile.typicalTokenBurn}"`],
-      ["plain", ","],
-    ],
-    [
-      ["plain", "} "],
-      ["kw", "satisfies"],
-      ["plain", " "],
-      ["type", "Fingerprint"],
-      ["plain", ";"],
-    ],
+    {
+      tokens: [
+        ["kw", "export const"],
+        ["plain", " "],
+        ["fn", handle],
+        ["plain", " = {"],
+      ],
+    },
+    { tokens: [["plain", "  agents: ["], ...agentTokens, ["plain", "],"]] },
+    {
+      mark: "add",
+      tokens: [
+        ["plain", "  model: "],
+        ["str", `"${model.toLowerCase()}"`],
+        ["plain", ", "],
+        ["cmt", `// ${pct}%`],
+      ],
+    },
+    {
+      mark: "add",
+      tokens: [
+        ["plain", "  burn: "],
+        ["str", `"${profile.typicalTokenBurn}"`],
+        ["plain", ","],
+      ],
+    },
+    {
+      tokens: [
+        ["plain", "} "],
+        ["kw", "satisfies"],
+        ["plain", " "],
+        ["type", "Fingerprint"],
+        ["plain", ";"],
+      ],
+    },
   ];
 }
 
@@ -242,24 +341,81 @@ export function snippetFilename(name: string): string {
   return `${handleFor(name)}.fingerprint.ts`;
 }
 
-export const HERO_SNIPPET: CodeLine[] = [
-  [
-    ["cmt", "$ "],
-    ["plain", "git commit -m "],
-    ["str", '"feat: fell in love"'],
-  ],
-  [["cmt", "2 hearts changed, 0 regressions"]],
-  [
-    ["kw", "+ "],
-    ["plain", "you"],
-  ],
-  [
-    ["kw", "+ "],
-    ["plain", "me"],
-  ],
-  [
-    ["cmt", "$ "],
-    ["plain", "git push origin "],
-    ["type", "forever"],
-  ],
+/** Live preview of the file onboarding is writing, answer by answer. */
+export function draftFingerprint(a: OnboardingAnswers): CodeRow[] {
+  const handle = handleFor(a.name) || "you";
+  const model = dominantModel(a.modelMix);
+  const agentTokens: CodeToken[] = [];
+  a.preferredAgents.slice(0, 2).forEach((id, i) => {
+    if (i > 0) agentTokens.push(["plain", ", "]);
+    agentTokens.push(["str", `"${id}"`]);
+  });
+
+  return [
+    {
+      tokens: [
+        ["kw", "export const"],
+        ["plain", " "],
+        ["fn", handle],
+        ["plain", " = {"],
+      ],
+    },
+    {
+      mark: a.school ? "add" : undefined,
+      tokens: a.school
+        ? [["plain", "  campus: "], ["str", `"${a.school}"`], ["plain", ","]]
+        : [["cmt", "  // campus: pending"]],
+    },
+    {
+      mark: a.preferredAgents.length ? "add" : undefined,
+      tokens: a.preferredAgents.length
+        ? [["plain", "  agents: ["], ...agentTokens, ["plain", "],"]]
+        : [["cmt", "  // agents: pending"]],
+    },
+    {
+      mark: "add",
+      tokens: [
+        ["plain", "  model: "],
+        ["str", `"${model.toLowerCase()}"`],
+        ["plain", ","],
+      ],
+    },
+    {
+      mark: a.typicalTokenBurn ? "add" : undefined,
+      tokens: a.typicalTokenBurn
+        ? [["plain", "  burn: "], ["str", `"${a.typicalTokenBurn}"`], ["plain", ","]]
+        : [["cmt", "  // burn: pending"]],
+    },
+    {
+      tokens: [
+        ["plain", "} "],
+        ["kw", "satisfies"],
+        ["plain", " "],
+        ["type", "Fingerprint"],
+        ["plain", ";"],
+      ],
+    },
+  ];
+}
+
+/** The landing hero: a commit that actually says what the product does. */
+export const HERO_SNIPPET: CodeRow[] = [
+  {
+    tokens: [
+      ["cmt", "$ "],
+      ["plain", "git checkout -b "],
+      ["type", "feat/us"],
+    ],
+  },
+  { tokens: [["cmt", "Switched to a new branch 'feat/us'"]] },
+  { mark: "add", tokens: [["plain", "you"]] },
+  { mark: "add", tokens: [["plain", "me"]] },
+  { tokens: [["cmt", "2 files changed, 0 regressions"]] },
+  {
+    tokens: [
+      ["cmt", "$ "],
+      ["plain", "git push origin "],
+      ["type", "forever"],
+    ],
+  },
 ];

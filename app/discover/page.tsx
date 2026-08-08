@@ -1,7 +1,6 @@
 "use client";
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -10,24 +9,41 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { BottomNav } from "@/components/BottomNav";
-import { CodePicture } from "@/components/CodePicture";
+import { AppShell, PageHeader } from "@/components/AppShell";
+import { CodePane } from "@/components/CodePane";
 import {
-  CheckIcon,
   ChipIcon,
+  CheckIcon,
   FilterIcon,
-  StarIcon,
+  MergeIcon,
+  PendingCircleIcon,
+  PullRequestIcon,
+  RequestChangesIcon,
   VerifiedBadge,
   XIcon,
 } from "@/components/icons";
+import { Avatar } from "@/components/Identicon";
+import {
+  Button,
+  CheckRun,
+  Chip,
+  EmptyState,
+  Key,
+  Label,
+  Loading,
+  StateBadge,
+} from "@/components/ui";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
+  checksForProfile,
   computePersona,
   fingerprintChips,
-  gradientForId,
+  handleOf,
+  prNumberFor,
   snippetFilename,
   snippetForProfile,
+  stableAgo,
   type ModelMix,
 } from "@/lib/swender";
 
@@ -42,9 +58,34 @@ const EXIT_TRANSFORM: Record<
   ExitDir,
   { x: number; y: number; rotate: number }
 > = {
-  left: { x: -520, y: 90, rotate: -22 },
-  right: { x: 520, y: 90, rotate: 22 },
-  up: { x: 0, y: -560, rotate: -4 },
+  left: { x: -520, y: 90, rotate: -14 },
+  right: { x: 520, y: 90, rotate: 14 },
+  up: { x: 0, y: -560, rotate: -3 },
+};
+
+/** Drag direction maps to a diff marker, not to a romance verb. */
+const INTENT: Record<
+  ExitDir,
+  { marker: string; label: string; color: string; text: string }
+> = {
+  right: {
+    marker: "+",
+    label: "approve",
+    color: "var(--added)",
+    text: "text-added",
+  },
+  left: {
+    marker: "-",
+    label: "close",
+    color: "var(--deleted)",
+    text: "text-deleted",
+  },
+  up: {
+    marker: "~",
+    label: "request changes",
+    color: "var(--pending)",
+    text: "text-pending",
+  },
 };
 
 type PublicCandidate = {
@@ -82,7 +123,7 @@ function modelChangeOptions(mix: ModelMix): {
     .map((to) => ({
       from: MODEL_LABELS[from],
       to: MODEL_LABELS[to],
-      label: `Switch from ${MODEL_LABELS[from]} → ${MODEL_LABELS[to]}`,
+      label: `${MODEL_LABELS[from]} → ${MODEL_LABELS[to]}`,
     }));
 }
 
@@ -144,7 +185,7 @@ export default function Discover() {
         action === "accept" ? "right" : action === "deny" ? "left" : "up";
       const fromX = dragRef.current.x;
       const fromY = dragRef.current.y;
-      const fromRotate = fromX * 0.06;
+      const fromRotate = fromX * 0.05;
 
       // Ghost flies away; deck advances immediately underneath at rest —
       // avoids the old card + next card both animating transforms.
@@ -175,10 +216,10 @@ export default function Discover() {
         });
         if (result.matched) {
           setMatchFlash(target.name);
-          window.setTimeout(() => setMatchFlash(null), 1800);
+          window.setTimeout(() => setMatchFlash(null), 2200);
         } else if (action === "request_changes") {
           setChangesFlash(target.name);
-          window.setTimeout(() => setChangesFlash(null), 1800);
+          window.setTimeout(() => setChangesFlash(null), 2000);
         }
       } catch {
         // keep card out of local deck even if network flakes; query will refresh
@@ -222,7 +263,7 @@ export default function Discover() {
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
       const { x: dx, y: dy } = dragRef.current;
-      setDrag({ x: dx, y: dy, rotate: dx * 0.06, active: true });
+      setDrag({ x: dx, y: dy, rotate: dx * 0.05, active: true });
     });
   };
 
@@ -260,14 +301,11 @@ export default function Discover() {
     return () => cancelAnimationFrame(id);
   }, [flyaway]);
 
-  // Keyboard: ← deny, → accept, ↑ request changes
+  // Keyboard: ← close, → approve, ↑ request changes
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!profile || busyRef.current || busy) return;
-      if (requestOpen) {
-        if (e.key === "Escape") setRequestOpen(false);
-        return;
-      }
+      if (requestOpen) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         void finishReview("deny", profile);
@@ -285,60 +323,63 @@ export default function Discover() {
 
   if (authLoading || (isAuthenticated && me === undefined)) {
     return (
-      <Shell>
-        <p className="mt-20 text-center text-xs tracking-wide text-muted">
-          Loading…
-        </p>
-      </Shell>
+      <AppShell path="~/review">
+        <Loading what="authenticating" />
+      </AppShell>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <Shell>
-        <Empty
-          title="Sign in to review PRs"
-          body="matching runs on your live AI coding fingerprint"
+      <AppShell path="~/review">
+        <EmptyState
+          glyph={<PullRequestIcon className="h-5 w-5" />}
+          code="401 unauthorized"
+          title="Sign in to review"
+          body="matching runs on your live AI coding fingerprint, so we need to know whose queue this is."
           href="/sign-in"
           cta="Sign in"
         />
-      </Shell>
+      </AppShell>
     );
   }
 
   if (!me?.hasFingerprint) {
     return (
-      <Shell>
-        <Empty
-          title="Fingerprint required"
-          body="finish onboarding so we can score pair-programming chemistry"
+      <AppShell path="~/review">
+        <EmptyState
+          glyph={<PullRequestIcon className="h-5 w-5" />}
+          code="412 precondition failed"
+          title="No fingerprint on file"
+          body="finish onboarding so we can score pair-programming chemistry against the queue."
           href="/onboarding"
-          cta="Build my twin"
+          cta="Build my fingerprint"
         />
-      </Shell>
+      </AppShell>
     );
   }
 
   if (candidates === undefined) {
     return (
-      <Shell>
-        <p className="mt-20 text-center text-xs tracking-wide text-muted">
-          Loading open PRs…
-        </p>
-      </Shell>
+      <AppShell path="~/review">
+        <Loading what="fetching open pull requests" />
+      </AppShell>
     );
   }
 
   if (!profile && !flyaway) {
     return (
-      <Shell>
-        <Empty
+      <AppShell path="~/review" status={<span>0 open</span>}>
+        <EmptyState
+          glyph={<CheckIcon className="h-5 w-5 text-added" />}
+          code="queue empty"
           title="Inbox zero"
-          body="no open PRs in nearby burn bands — check merges or come back later"
+          body="no open PRs in nearby burn bands. check your merges, or come back when the lab fills up tonight."
           href="/matches"
           cta="View merges"
+          variant="ghost"
         />
-      </Shell>
+      </AppShell>
     );
   }
 
@@ -368,7 +409,7 @@ export default function Discover() {
     transition:
       drag.active || busy
         ? "none"
-        : "transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)",
+        : "transform 0.3s var(--ease-out)",
     willChange: drag.active ? ("transform" as const) : undefined,
   };
   const fly = flyaway ? EXIT_TRANSFORM[flyaway.dir] : null;
@@ -380,60 +421,53 @@ export default function Discover() {
             : `translate3d(${flyaway.fromX}px, ${flyaway.fromY}px, 0) rotate(${flyaway.fromRotate}deg)`,
           opacity: flyaway.flying ? 0 : 1,
           transition: flyaway.flying
-            ? `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease-out`
+            ? `transform ${FLY_MS}ms var(--ease-out), opacity ${FLY_MS}ms ease-out`
             : "none",
         }
       : undefined;
 
   return (
-    <Shell>
-      {matchFlash && (
-        <div className="fixed inset-x-0 top-8 z-20 mx-auto flex w-fit items-center gap-2 rounded-full bg-wine px-5 py-2 text-sm font-semibold text-ink shadow-[0_0_30px_rgba(124,29,49,0.5)] animate-[float-up_0.35s_ease-out]">
-          <CheckIcon className="h-4 w-4" />
-          Merged with {matchFlash}
-        </div>
-      )}
-      {changesFlash && (
-        <div className="fixed inset-x-0 top-8 z-20 mx-auto flex w-fit items-center gap-2 rounded-full border border-line-bright bg-card px-5 py-2 text-sm font-semibold text-ink animate-[float-up_0.35s_ease-out]">
-          <StarIcon className="h-4 w-4 text-rose" />
-          Changes requested · {changesFlash}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-rose">
-            pull request
-          </p>
-          <h1 className="font-serif text-4xl text-ink">Review</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="rounded-full border border-line-bright px-3 py-1.5 font-mono text-[11px] text-rose">
-            open · {shown ? `${Math.round(shown.matchScore * 100)}% fit` : "…"}
+    <AppShell
+      path="~/review"
+      status={
+        <>
+          <span className="flex items-center gap-1.5 text-added">
+            <PullRequestIcon className="h-3 w-3" />
+            {deck.length} open
           </span>
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-line-bright text-rose transition hover:border-rose"
-            aria-label="Filters"
-          >
-            <FilterIcon className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+          {shown && <span>{Math.round(shown.matchScore * 100)}% fit</span>}
+        </>
+      }
+    >
+      {matchFlash && <Toast kind="merged" name={matchFlash} />}
+      {changesFlash && <Toast kind="changes" name={changesFlash} />}
 
-      <div className="relative mt-5 flex flex-1 overflow-hidden">
+      <PageHeader
+        crumb="swender / pulls"
+        title="Open PRs"
+        meta={`${deck.length} awaiting your review`}
+        actions={
+          <Button variant="ghost" aria-label="Filters" className="h-9 w-9 px-0">
+            <FilterIcon className="h-4 w-4" />
+          </Button>
+        }
+      />
+
+      <div className="relative mt-4 flex flex-1 overflow-hidden">
         {nextProfile && (
           <div
             key={nextProfile._id}
-            className={`absolute inset-0 overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(nextProfile._id)}`}
+            className="absolute inset-0 overflow-hidden rounded-lg border border-rule bg-panel"
             style={{
-              transform: `scale(${0.94 + dragProgress * 0.04})`,
-              opacity: 0.85 + dragProgress * 0.15,
-              transition: drag.active ? "none" : "transform 0.2s ease-out, opacity 0.2s ease-out",
+              transform: `scale(${0.955 + dragProgress * 0.035})`,
+              opacity: 0.6 + dragProgress * 0.4,
+              transition: drag.active
+                ? "none"
+                : "transform 0.2s var(--ease-out), opacity 0.2s var(--ease-out)",
             }}
             aria-hidden
           >
-            <CardFace profile={nextProfile} muted />
+            <CardFace profile={nextProfile} quiet />
           </div>
         )}
 
@@ -444,110 +478,252 @@ export default function Discover() {
             onPointerMove={onPointerMove}
             onPointerUp={(e) => endDrag(e.pointerId)}
             onPointerCancel={(e) => endDrag(e.pointerId)}
-            className={`relative z-10 flex w-full flex-1 cursor-grab touch-none select-none flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(profile._id)} active:cursor-grabbing`}
+            className="relative z-10 w-full flex-1 cursor-grab touch-none select-none active:cursor-grabbing"
             style={cardStyle}
           >
-            <div
-              className="pointer-events-none absolute inset-0 z-20 flex items-start justify-between px-6 pt-14"
-              aria-hidden
-            >
-              <Stamp
-                label="ACCEPT"
-                tone="accept"
-                visible={intent === "right" && !flyaway}
-                strength={dragProgress}
-              />
-              <Stamp
-                label="DENY"
-                tone="deny"
-                visible={intent === "left" && !flyaway}
-                strength={dragProgress}
-              />
-              <Stamp
-                label="REQUEST CHANGES"
-                tone="changes"
-                visible={intent === "up" && !flyaway}
-                strength={dragProgress}
-              />
-            </div>
-
-            <CardFace profile={profile} />
+            <CardFace
+              profile={profile}
+              intent={intent}
+              strength={dragProgress}
+            />
           </div>
         )}
 
         {flyaway && (
           <div
-            className={`pointer-events-none absolute inset-0 z-30 flex flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(flyaway.profile._id)}`}
+            className="pointer-events-none absolute inset-0 z-30"
             style={flyawayStyle}
             aria-hidden
           >
-            <div className="absolute inset-0 z-20 flex items-start justify-between px-6 pt-14">
-              <Stamp
-                label="ACCEPT"
-                tone="accept"
-                visible={flyaway.dir === "right"}
-                strength={1}
-              />
-              <Stamp
-                label="DENY"
-                tone="deny"
-                visible={flyaway.dir === "left"}
-                strength={1}
-              />
-              <Stamp
-                label="REQUEST CHANGES"
-                tone="changes"
-                visible={flyaway.dir === "up"}
-                strength={1}
-              />
-            </div>
-            <CardFace profile={flyaway.profile} />
+            <CardFace
+              profile={flyaway.profile}
+              intent={flyaway.dir}
+              strength={1}
+            />
           </div>
         )}
       </div>
 
-      <div className="mt-5 flex items-center justify-center gap-5">
-        <ActionButton
-          label="Deny"
-          pressed={intent === "left"}
+      <div className="mt-4 flex items-stretch gap-2">
+        <Button
+          variant="ghost"
+          aria-label="Close pull request"
           onClick={() => doReview("deny")}
-        >
-          <XIcon className="h-5 w-5" />
-        </ActionButton>
-        <ActionButton
-          label="Request changes"
-          pressed={intent === "up" || requestOpen}
-          onClick={() => doReview("request_changes")}
-        >
-          <StarIcon className="h-5 w-5" />
-        </ActionButton>
-        <button
-          type="button"
-          aria-label="Accept"
-          onClick={() => doReview("accept")}
-          className={`flex h-18 w-18 items-center justify-center rounded-full bg-wine text-ink shadow-[0_0_30px_rgba(124,29,49,0.5)] transition hover:bg-wine-hover ${
-            intent === "right" ? "scale-110 bg-wine-hover" : ""
+          className={`h-12 w-12 px-0 ${
+            intent === "left"
+              ? "border-deleted/70 bg-deleted/10 text-deleted"
+              : "hover:border-deleted/60 hover:text-deleted"
           }`}
         >
-          <CheckIcon className="h-7 w-7" />
-        </button>
+          <XIcon className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          aria-label="Request changes"
+          onClick={() => doReview("request_changes")}
+          className={`h-12 w-12 px-0 ${
+            intent === "up" || requestOpen
+              ? "border-pending/70 bg-pending/10 text-pending"
+              : "hover:border-pending/60 hover:text-pending"
+          }`}
+        >
+          <RequestChangesIcon className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="approve"
+          onClick={() => doReview("accept")}
+          className={`h-12 flex-1 text-[13px] ${intent === "right" ? "brightness-110" : ""}`}
+        >
+          <CheckIcon className="h-4 w-4" />
+          Approve
+        </Button>
       </div>
-      <p className="mt-3 text-center font-mono text-[10px] tracking-wide text-faint">
-        ← deny · ↑ request changes · → accept
+
+      <p className="mt-3 flex items-center justify-center gap-2 text-[10px] text-ink-4">
+        <Key>←</Key> close
+        <span className="text-ink-4/50">·</span>
+        <Key>↑</Key> changes
+        <span className="text-ink-4/50">·</span>
+        <Key>→</Key> approve
       </p>
 
-      {requestOpen && (
-        <RequestChangesModal
+      {requestOpen && profile && (
+        <RequestChangesDialog
           profile={profile}
           onClose={() => setRequestOpen(false)}
-          onSubmit={(payload) => void finishReview("request_changes", profile, payload)}
+          onSubmit={(payload) =>
+            void finishReview("request_changes", profile, payload)
+          }
         />
       )}
-    </Shell>
+    </AppShell>
   );
 }
 
-function RequestChangesModal({
+/* ------------------------------- The PR card ------------------------------ */
+
+function CardFace({
+  profile,
+  quiet = false,
+  intent = null,
+  strength = 0,
+}: {
+  profile: PublicCandidate;
+  quiet?: boolean;
+  intent?: ExitDir | null;
+  strength?: number;
+}) {
+  const persona = computePersona(profile);
+  const chips = fingerprintChips(profile);
+  const checks = checksForProfile(profile);
+  const handle = handleOf(profile.name);
+  const pr = prNumberFor(profile._id);
+  const marker = intent ? INTENT[intent] : null;
+
+  return (
+    <article
+      className="relative flex h-full flex-col overflow-hidden rounded-lg border border-rule bg-panel"
+      style={
+        marker
+          ? {
+              boxShadow: `inset ${3 + strength * 4}px 0 0 0 ${marker.color}`,
+              borderColor: `color-mix(in srgb, ${marker.color} ${Math.round(strength * 55)}%, var(--rule))`,
+            }
+          : undefined
+      }
+    >
+      {/* Dragging paints the review marker over the hunk, the way staging does. */}
+      {marker && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20"
+          style={{
+            background: marker.color,
+            opacity: strength * 0.07,
+          }}
+        />
+      )}
+
+      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-rule bg-raised px-3">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-kw" />
+        <span className="truncate text-[11px] text-ink-2">
+          {snippetFilename(profile.name)}
+        </span>
+        <span className="ml-auto shrink-0">
+          {marker ? (
+            <span
+              className={`flex items-center gap-1.5 text-[10px] font-semibold ${marker.text}`}
+              style={{ opacity: 0.45 + strength * 0.55 }}
+            >
+              <span className="text-[12px] leading-none">{marker.marker}</span>
+              {marker.label}
+            </span>
+          ) : (
+            <StateBadge state="open" />
+          )}
+        </span>
+      </header>
+
+      <div className="flex shrink-0 items-center gap-3 px-3.5 pt-3.5">
+        <Avatar
+          id={profile._id}
+          name={profile.name}
+          src={profile.avatarUrl}
+          size={64}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5">
+            <span className="truncate text-[19px] font-semibold leading-tight tracking-[-0.02em] text-ink">
+              {profile.name}
+            </span>
+            <VerifiedBadge className="h-4 w-4 shrink-0 text-kw" />
+          </p>
+          <p className="mt-1 truncate text-[11px] text-ink-3">
+            @{handle}
+            {profile.school ? ` · ${profile.school}` : ""}
+          </p>
+          <p className="mt-1.5 truncate text-[10.5px] text-ink-4">
+            #{pr} opened {stableAgo(profile._id)} ago · 1 commit
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 shrink-0 px-3.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-kw/12 px-2.5 py-1 text-[10.5px] font-semibold text-kw">
+          {persona.title}
+        </span>
+      </p>
+
+      <div className="mt-3 min-h-0 flex-1 overflow-hidden border-y border-rule">
+        <CodePane
+          rows={snippetForProfile(profile)}
+          hunk={`@@ -0,0 +1,5 @@ ${handle}`}
+          className="h-full"
+        />
+      </div>
+
+      {!quiet && (
+        <div className="shrink-0 px-3.5 py-3">
+          <CheckRun checks={checks} />
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {chips.map((chip) => (
+              <Chip key={chip.label}>
+                <ChipIcon chip={chip} />
+                {chip.label}
+              </Chip>
+            ))}
+          </div>
+
+          {profile.bio && (
+            <div className="mt-3 border-l-2 border-kw/50 pl-3">
+              <Label>commit message</Label>
+              <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-ink-2">
+                {profile.bio}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+/* --------------------------------- Toasts -------------------------------- */
+
+function Toast({ kind, name }: { kind: "merged" | "changes"; name: string }) {
+  const merged = kind === "merged";
+  return (
+    <div
+      role="status"
+      className="pop fixed inset-x-0 top-6 z-40 mx-auto flex w-fit max-w-[92%] items-center gap-2.5 rounded-sm border border-rule-strong bg-overlay px-3.5 py-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+      style={{
+        boxShadow: `inset 3px 0 0 0 ${merged ? "var(--kw)" : "var(--pending)"}, 0 8px 28px rgba(0,0,0,0.55)`,
+      }}
+    >
+      {merged ? (
+        <MergeIcon className="h-4 w-4 shrink-0 text-kw" />
+      ) : (
+        <PendingCircleIcon className="h-4 w-4 shrink-0 text-pending" />
+      )}
+      <span className="text-[12px] text-ink">
+        {merged ? (
+          <>
+            <span className="font-semibold text-kw">Merged</span> with {name}
+          </>
+        ) : (
+          <>
+            Changes requested on <span className="text-ink">{name}</span>
+          </>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/* --------------------------- Request changes flow ------------------------- */
+
+function RequestChangesDialog({
   profile,
   onClose,
   onSubmit,
@@ -559,282 +735,101 @@ function RequestChangesModal({
     requestedChange: { kind: "model"; from: string; to: string };
   }) => void;
 }) {
+  const ref = useRef<HTMLDialogElement>(null);
   const options = modelChangeOptions(profile.modelMix);
   const [selected, setSelected] = useState(0);
   const [note, setNote] = useState("");
 
+  // Native <dialog> gives focus trapping, Escape, and scroll lock for free.
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 px-4 pb-8 pt-16 sm:items-center">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default"
-        aria-label="Close"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-md rounded-3xl border border-line bg-card p-5 shadow-2xl">
-        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-rose">
-          request changes
-        </p>
-        <h2 className="mt-2 font-serif text-3xl text-ink">
-          Patch {profile.name}&apos;s PR
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === ref.current) onClose();
+      }}
+      className="pop m-auto w-[calc(100%-28px)] max-w-md rounded-lg border border-rule-strong bg-overlay p-0 text-ink shadow-[0_16px_50px_rgba(0,0,0,0.6)] backdrop:bg-black/70 backdrop:backdrop-blur-[2px]"
+    >
+      <header className="flex h-9 items-center gap-2 border-b border-rule bg-raised/70 px-3">
+        <RequestChangesIcon className="h-3.5 w-3.5 text-pending" />
+        <span className="text-[11px] text-ink-2">review · request changes</span>
+      </header>
+
+      <div className="p-4">
+        <h2 className="text-[15px] font-semibold tracking-tight text-ink">
+          Patch #{prNumberFor(profile._id)}
         </h2>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
-          Interested — but not merge-ready. Ask them to change something concrete,
-          like their model mix.
+        <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-3">
+          Interested, not merge-ready. Ask {profile.name.split(" ")[0]} to change
+          one concrete thing.
         </p>
 
-        <div className="mt-5 space-y-2">
-          {options.map((opt, i) => (
-            <button
-              key={opt.label}
-              type="button"
-              onClick={() => setSelected(i)}
-              className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition ${
-                selected === i
-                  ? "border-rose bg-wine/30 text-ink"
-                  : "border-line bg-black/20 text-muted hover:border-line-bright"
-              }`}
-            >
-              <span>{opt.label}</span>
-              {selected === i && <CheckIcon className="h-4 w-4 text-rose" />}
-            </button>
-          ))}
+        <div className="mt-4">
+          <Label>requested change · model</Label>
+          <div className="mt-2 space-y-1.5">
+            {options.map((opt, i) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setSelected(i)}
+                aria-pressed={selected === i}
+                className={`flex w-full items-center gap-2.5 rounded-sm border px-3 py-2.5 text-left text-[12px] transition-colors duration-150 ${
+                  selected === i
+                    ? "border-pending/60 bg-pending/10 text-ink"
+                    : "border-rule bg-inset text-ink-3 hover:border-rule-strong hover:text-ink-2"
+                }`}
+              >
+                <span
+                  className={`w-3 text-center text-[13px] leading-none ${selected === i ? "text-pending" : "text-ink-4"}`}
+                >
+                  {selected === i ? "~" : " "}
+                </span>
+                {opt.label}
+                {selected === i && (
+                  <CheckIcon className="ml-auto h-3.5 w-3.5 text-pending" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         <label className="mt-4 block">
-          <span className="text-[10px] uppercase tracking-[0.22em] text-faint">
-            review comment
-          </span>
+          <Label>review comment</Label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            placeholder={`e.g. try ${options[selected]?.to ?? "another model"} on your next ship and ping me`}
-            className="mt-2 w-full resize-none rounded-xl border border-line bg-black/30 px-3 py-2.5 text-sm text-ink placeholder:text-faint focus:border-rose focus:outline-none"
+            placeholder={`try ${options[selected]?.to ?? "another model"} on your next ship and ping me`}
+            className="mt-2 w-full resize-none rounded-sm border border-rule bg-inset px-3 py-2.5 text-[12px] leading-relaxed text-ink placeholder:text-ink-4 focus:border-fn/60"
           />
         </label>
 
-        <div className="mt-5 flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-full border border-line-bright py-3 text-sm text-muted transition hover:border-rose hover:text-rose"
-          >
+        <div className="mt-4 flex gap-2">
+          <Button variant="ghost" size="lg" onClick={onClose} className="flex-1">
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="lg"
             onClick={() => {
               const opt = options[selected];
               if (!opt) return;
               const comment =
-                note.trim() ||
-                `Requesting model change: ${opt.from} → ${opt.to}`;
+                note.trim() || `Requesting model change: ${opt.from} → ${opt.to}`;
               onSubmit({
                 comment,
-                requestedChange: {
-                  kind: "model",
-                  from: opt.from,
-                  to: opt.to,
-                },
+                requestedChange: { kind: "model", from: opt.from, to: opt.to },
               });
             }}
-            className="flex-1 rounded-full bg-wine py-3 text-sm font-semibold text-ink transition hover:bg-wine-hover"
+            className="flex-[1.4]"
           >
             Submit review
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stamp({
-  label,
-  tone,
-  visible,
-  strength,
-}: {
-  label: string;
-  tone: "accept" | "deny" | "changes";
-  visible: boolean;
-  strength: number;
-}) {
-  if (!visible) return null;
-  const rot = tone === "accept" ? 12 : tone === "deny" ? -12 : 0;
-  const position =
-    tone === "accept"
-      ? "ml-auto"
-      : tone === "deny"
-        ? "mr-auto"
-        : "mx-auto mt-8";
-  const color =
-    tone === "accept"
-      ? "border-rose text-rose"
-      : tone === "deny"
-        ? "border-faint text-faint"
-        : "border-blush text-blush";
-  return (
-    <span
-      className={`rounded-md border-2 px-3 py-1 text-sm font-bold tracking-[0.14em] ${position} ${color}`}
-      style={{
-        opacity: Math.max(0.35, strength),
-        transform: `scale(${0.92 + strength * 0.08}) rotate(${rot}deg)`,
-        transition: "opacity 0.12s ease-out, transform 0.12s ease-out",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function CardFace({
-  profile,
-  muted = false,
-}: {
-  profile: PublicCandidate;
-  muted?: boolean;
-}) {
-  const persona = computePersona(profile);
-  const chips = fingerprintChips(profile);
-  const topModel = MODEL_LABELS[dominantModel(profile.modelMix)];
-
-  return (
-    <>
-      <div className="relative z-10 flex items-center justify-between gap-2 px-4 pt-4">
-        <span className="rounded-full border border-white/20 bg-black/40 px-2.5 py-1 font-mono text-[10px] text-blush">
-          pr · fingerprint
-        </span>
-        <span className="rounded-full border border-white/15 bg-black/40 px-2.5 py-1 font-mono text-[10px] text-ink/80">
-          model: {topModel}
-        </span>
-      </div>
-
-      {profile.avatarUrl ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={profile.avatarUrl}
-            alt={profile.name}
-            className="absolute inset-0 h-full w-full object-cover"
-            draggable={false}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/20" />
-          <div className="flex-1" />
-        </>
-      ) : (
-        <div className="relative flex flex-1 items-center px-6 py-4">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(201,85,107,0.12),transparent_60%)]" />
-          {!muted && (
-            <CodePicture
-              filename={snippetFilename(profile.name)}
-              lines={snippetForProfile(profile)}
-              className="relative w-full rotate-[-1.5deg]"
-            />
-          )}
-        </div>
-      )}
-
-      <div className="relative z-10 space-y-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-5 pb-6 pt-8">
-        <p className="flex flex-wrap items-center gap-x-2 font-serif text-4xl text-ink">
-          {profile.name}
-          <VerifiedBadge className="h-5 w-5 text-rose" />
-          {profile.school && (
-            <span className="w-full text-xs tracking-wide text-muted">
-              {profile.school}
-            </span>
-          )}
-        </p>
-        <span className="inline-block rounded-full bg-wine px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-ink">
-          {persona.title}
-        </span>
-        {!muted && (
-          <>
-            <div className="flex flex-wrap gap-2">
-              {chips.map((chip) => (
-                <span
-                  key={chip.label}
-                  className="flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[11px] text-ink"
-                >
-                  <ChipIcon chip={chip} />
-                  {chip.label}
-                </span>
-              ))}
-            </div>
-            {profile.bio && (
-              <div className="rounded-xl border border-white/10 bg-black/50 px-4 py-3">
-                <p className="text-[9px] uppercase tracking-[0.3em] text-rose">
-                  commit message
-                </p>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-ink/90">
-                  &ldquo;{profile.bio}&rdquo;
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <main className="flex flex-1 flex-col px-5 pb-4 pt-6">{children}</main>
-      <BottomNav />
-    </div>
-  );
-}
-
-function Empty({
-  title,
-  body,
-  href,
-  cta,
-}: {
-  title: string;
-  body: string;
-  href: string;
-  cta: string;
-}) {
-  return (
-    <div className="mt-16 flex flex-col items-center text-center">
-      <h1 className="font-serif text-4xl text-ink">{title}</h1>
-      <p className="mt-4 max-w-64 text-xs leading-relaxed tracking-wide text-muted">
-        {body}
-      </p>
-      <Link
-        href={href}
-        className="mt-6 rounded-full bg-wine px-8 py-3 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-      >
-        {cta}
-      </Link>
-    </div>
-  );
-}
-
-function ActionButton({
-  label,
-  onClick,
-  children,
-  pressed = false,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  pressed?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className={`flex h-14 w-14 items-center justify-center rounded-full border border-line-bright text-muted transition hover:border-rose hover:text-rose ${
-        pressed ? "scale-110 border-rose text-rose" : ""
-      }`}
-    >
-      {children}
-    </button>
+    </dialog>
   );
 }

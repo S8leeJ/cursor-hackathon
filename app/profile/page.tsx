@@ -2,14 +2,23 @@
 
 import { useClerk } from "@clerk/nextjs";
 import { useConvexAuth, useQuery } from "convex/react";
-import Link from "next/link";
-import { BottomNav } from "@/components/BottomNav";
-import { CodePicture } from "@/components/CodePicture";
+import { AppShell } from "@/components/AppShell";
+import { CodePane } from "@/components/CodePane";
 import { ChipIcon, UserIcon, VerifiedBadge } from "@/components/icons";
+import { Avatar } from "@/components/Identicon";
+import {
+  Button,
+  ButtonLink,
+  Chip,
+  EmptyState,
+  Loading,
+  Panel,
+} from "@/components/ui";
 import { api } from "@/convex/_generated/api";
 import {
   computePersona,
   fingerprintChips,
+  handleOf,
   snippetFilename,
   snippetForProfile,
   type ModelMix,
@@ -21,71 +30,102 @@ export default function Profile() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const me = useQuery(api.users.current, isAuthenticated ? {} : "skip");
 
-  return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <main className="flex-1 px-5 pb-4 pt-6">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="font-serif text-4xl text-ink">Profile</h1>
-          {isAuthenticated && (
-            <button
-              type="button"
-              onClick={() => void signOut({ redirectUrl: "/" })}
-              className="rounded-full border border-line-bright px-3.5 py-1.5 text-[11px] tracking-wide text-muted transition hover:border-rose hover:text-rose"
-            >
-              Sign out
-            </button>
-          )}
-        </div>
+  const ready =
+    me?.hasFingerprint &&
+    me.preferredAgents &&
+    me.modelMix &&
+    me.typicalTokenBurn;
 
-        {authLoading || (isAuthenticated && me === undefined) ? (
-          <p className="mt-16 text-center text-xs tracking-wide text-muted">
-            Loading…
-          </p>
-        ) : !isAuthenticated ? (
-          <Empty
-            body="sign in to view your twin profile"
-            href="/sign-in"
-            cta="Sign in"
-          />
-        ) : !me?.hasFingerprint ||
-          !me.preferredAgents ||
-          !me.modelMix ||
-          !me.typicalTokenBurn ? (
-          <Empty
-            body="404: fingerprint not found. run onboarding to init."
-            href="/onboarding"
-            cta="Get started"
-          />
-        ) : (
-          <ProfileCard
+  return (
+    <AppShell
+      path="~/profile"
+      branch={ready ? `feat/${handleOf(me.name)}` : "main"}
+      status={
+        ready ? (
+          <span className="text-added">fingerprint synced</span>
+        ) : undefined
+      }
+    >
+      {authLoading || (isAuthenticated && me === undefined) ? (
+        <Loading what="reading profile" />
+      ) : !isAuthenticated ? (
+        <EmptyState
+          glyph={<UserIcon className="h-5 w-5" />}
+          code="401 unauthorized"
+          title="Sign in to view your profile"
+          body="your fingerprint lives on your account, so nothing shows until you're in."
+          href="/sign-in"
+          cta="Sign in"
+        />
+      ) : !ready ? (
+        <EmptyState
+          glyph={<UserIcon className="h-5 w-5" />}
+          code="404 fingerprint not found"
+          title="Nothing committed yet"
+          body="run onboarding to write your fingerprint and join the campus index."
+          href="/onboarding"
+          cta="Build my fingerprint"
+        />
+      ) : (
+        <>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <Avatar
+                id={me._id}
+                name={me.name}
+                src={me.avatarUrl}
+                size={64}
+              />
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5">
+                  <span className="truncate text-[19px] font-semibold leading-tight tracking-[-0.02em] text-ink">
+                    {me.name}
+                  </span>
+                  <VerifiedBadge className="h-4 w-4 shrink-0 text-kw" />
+                </p>
+                <p className="mt-1 truncate text-[11px] text-ink-3">
+                  @{handleOf(me.name)}
+                  {me.school ? ` · ${me.school}` : ""}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void signOut({ redirectUrl: "/" })}
+            >
+              sign out
+            </Button>
+          </div>
+
+          <ProfileBody
+            id={me._id}
             name={me.name}
             school={me.school}
             bio={me.bio}
-            avatarUrl={me.avatarUrl}
             preferredAgents={me.preferredAgents}
             modelMix={me.modelMix}
             typicalTokenBurn={me.typicalTokenBurn}
           />
-        )}
-      </main>
-      <BottomNav />
-    </div>
+        </>
+      )}
+    </AppShell>
   );
 }
 
-function ProfileCard({
+function ProfileBody({
+  id,
   name,
   school,
   bio,
-  avatarUrl,
   preferredAgents,
   modelMix,
   typicalTokenBurn,
 }: {
+  id: string;
   name: string;
   school?: string;
   bio?: string;
-  avatarUrl?: string;
   preferredAgents: string[];
   modelMix: ModelMix;
   typicalTokenBurn: TokenBurnBand;
@@ -103,113 +143,56 @@ function ProfileCard({
   });
 
   return (
-    <div className="float-up mt-6">
-      <div className="flex flex-col items-center rounded-3xl border border-line bg-card px-6 py-8 text-center">
-        <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line-bright bg-gradient-to-b from-[#2a0f16] to-[#12060a] font-serif text-4xl text-blush">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt={name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            name.charAt(0).toUpperCase() || "?"
-          )}
-        </span>
-        <p className="mt-4 flex items-center gap-2 font-serif text-3xl text-ink">
-          {name}
-          <VerifiedBadge className="h-5 w-5 text-rose" />
-        </p>
-        {school && (
-          <p className="mt-1 text-xs tracking-wide text-muted">{school}</p>
-        )}
-        <span className="mt-3 rounded-full bg-wine px-4 py-1.5 text-[11px] font-medium tracking-wide text-ink">
-          {persona.title}
-        </span>
-        <p className="mt-3 max-w-64 text-xs leading-relaxed tracking-wide text-muted">
+    <div className="rise mt-5 flex flex-col gap-3">
+      <div className="border-l-2 border-kw/50 pl-3">
+        <p className="text-[13px] font-semibold text-kw">{persona.title}</p>
+        <p className="mt-1 text-[11.5px] leading-relaxed text-ink-3">
           {persona.tagline}
         </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-line bg-card px-5 py-4">
-        <p className="text-[9px] uppercase tracking-[0.3em] text-muted">
-          your fingerprint
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {chips.map((chip) => (
-            <span
-              key={chip.label}
-              className="flex items-center gap-1.5 rounded-full border border-line-bright px-3 py-1 text-[11px] text-ink"
-            >
-              <ChipIcon chip={chip} />
-              {chip.label}
-            </span>
-          ))}
-        </div>
-        <CodePicture
-          filename={snippetFilename(name)}
-          lines={snippetForProfile({
+      <Panel filename={snippetFilename(name)} bodyClassName="pb-3">
+        <CodePane
+          rows={snippetForProfile({
             name,
             preferredAgents,
             modelMix,
             typicalTokenBurn,
           })}
-          className="mt-4"
-          textSize="text-[10px]"
+          textSize="text-[10.5px]"
         />
-      </div>
+        <div className="mt-3 flex flex-wrap gap-1.5 px-3">
+          {chips.map((chip) => (
+            <Chip key={chip.label}>
+              <ChipIcon chip={chip} />
+              {chip.label}
+            </Chip>
+          ))}
+        </div>
+      </Panel>
 
       {bio && (
-        <div className="mt-4 rounded-2xl border border-line bg-card px-5 py-4">
-          <p className="text-[9px] uppercase tracking-[0.3em] text-rose">
-            hot take
+        <Panel filename="README.md" bodyClassName="px-3.5 py-3">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink-4">
+            # hot take
           </p>
-          <p className="mt-2 text-[13px] leading-relaxed text-ink/90">
-            &ldquo;{bio}&rdquo;
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-2">
+            {bio}
           </p>
-        </div>
+        </Panel>
       )}
 
-      <div className="mt-6 flex gap-3">
-        <Link
-          href="/onboarding"
-          className="flex-1 rounded-full border border-line-bright py-3 text-center text-xs tracking-wide text-blush transition hover:border-rose"
-        >
+      <div className="mt-1 flex gap-2">
+        <ButtonLink href="/onboarding" variant="ghost" size="lg" className="flex-1">
           Edit fingerprint
-        </Link>
-        <Link
-          href="/wrapped"
-          className="flex-1 rounded-full bg-wine py-3 text-center text-xs font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-        >
-          View my card
-        </Link>
+        </ButtonLink>
+        <ButtonLink href="/wrapped" size="lg" className="flex-1">
+          Release card
+        </ButtonLink>
       </div>
-    </div>
-  );
-}
-
-function Empty({
-  body,
-  href,
-  cta,
-}: {
-  body: string;
-  href: string;
-  cta: string;
-}) {
-  return (
-    <div className="mt-16 flex flex-col items-center text-center">
-      <UserIcon className="h-12 w-12 text-line-bright" />
-      <p className="mt-5 max-w-60 text-xs leading-relaxed tracking-wide text-muted">
-        {body}
+      <p className="text-center text-[10px] text-ink-4">
+        id {id.slice(0, 8)} · indexed for RAG search
       </p>
-      <Link
-        href={href}
-        className="mt-6 rounded-full bg-wine px-8 py-3 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-      >
-        {cta}
-      </Link>
     </div>
   );
 }

@@ -1,19 +1,29 @@
 "use client";
 
 import { useConvexAuth, useQuery } from "convex/react";
-import Link from "next/link";
 import { useState } from "react";
-import { CodePicture } from "@/components/CodePicture";
-import { ChipIcon, HeartIcon, ShareIcon } from "@/components/icons";
+import { CodePane } from "@/components/CodePane";
+import { ChipIcon, ShareIcon, TagIcon } from "@/components/icons";
+import { Button, ButtonLink, Chip, Label, Panel } from "@/components/ui";
 import { api } from "@/convex/_generated/api";
 import {
   burnLabel,
   computePersona,
   dominantModel,
   fingerprintChips,
-  snippetFilename,
+  handleOf,
+  shortHashFor,
   snippetForProfile,
+  type TokenBurnBand,
 } from "@/lib/swender";
+
+const BURN_BANDS: TokenBurnBand[] = ["low", "medium", "high", "extreme"];
+const BURN_COLOR: Record<TokenBurnBand, string> = {
+  low: "var(--fn)",
+  medium: "var(--type)",
+  high: "var(--pending)",
+  extreme: "var(--deleted)",
+};
 
 export default function Wrapped() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
@@ -25,9 +35,7 @@ export default function Wrapped() {
   }
 
   if (!isAuthenticated) {
-    return (
-      <Gate title="Sign in to see your card" href="/sign-in" cta="Sign in" />
-    );
+    return <Gate title="Sign in to see your release" href="/sign-in" cta="Sign in" />;
   }
 
   if (
@@ -38,9 +46,9 @@ export default function Wrapped() {
   ) {
     return (
       <Gate
-        title="No fingerprint yet"
+        title="No fingerprint tagged yet"
         href="/onboarding"
-        cta="Build my twin"
+        cta="Build my fingerprint"
       />
     );
   }
@@ -59,6 +67,7 @@ export default function Wrapped() {
     modelMix,
     typicalTokenBurn,
   });
+  const burnIndex = BURN_BANDS.indexOf(typicalTokenBurn);
 
   const share = async () => {
     const text = `I'm a ${persona.title} on SWEnder — ${burnLabel(typicalTokenBurn)} burn, ${dominantModel(modelMix)}-forward. Find your compile-time match.`;
@@ -72,91 +81,98 @@ export default function Wrapped() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <HeartIcon className="h-4 w-4 text-rose" />
-        <p className="text-sm tracking-wide text-ink">
-          SWEnder <span className="text-rose">Wrapped</span>
-        </p>
-        <span className="text-blush">✦</span>
-      </div>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-7">
+      <p className="text-[10px] text-ink-4">
+        <span className="text-cmt">$ </span>git tag -a v1.0.0 -m
+        <span className="text-str"> &quot;fingerprint&quot;</span>
+      </p>
 
-      <div className="float-up mt-8 text-center">
-        <h1 className="font-serif text-[2.4rem] leading-[1.15] text-ink">
-          You&apos;re a<br />
-          <span className="italic text-rose">{persona.title}</span>
+      <div className="rise mt-7">
+        <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-kw">
+          <TagIcon className="h-3.5 w-3.5" />
+          release v1.0.0
+        </p>
+        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.08] tracking-[-0.035em] text-ink">
+          {persona.title}
         </h1>
-        <p className="mx-auto mt-4 max-w-72 text-xs leading-relaxed tracking-wide text-muted">
+        <p className="mt-3 max-w-80 text-[12px] leading-relaxed text-ink-3">
           {persona.tagline}
         </p>
       </div>
 
-      {/* Persona card */}
-      <div className="ornate-frame float-up mt-8 rounded-xl bg-card p-7 text-center">
-        <p className="text-[9px] uppercase tracking-[0.35em] text-muted">
-          twin persona
-        </p>
-        <h2 className="mt-3 font-serif text-3xl uppercase tracking-wide text-rose">
-          {persona.title}
-        </h2>
-
-        {/* Your fingerprint, as source */}
-        <CodePicture
-          filename={snippetFilename(me.name)}
-          lines={snippetForProfile({
+      <Panel
+        filename="RELEASE_NOTES.md"
+        className="rise mt-7"
+        right={
+          <span className="text-[10px] text-cmt">{shortHashFor(me._id)}</span>
+        }
+        bodyClassName="pb-4"
+      >
+        <CodePane
+          rows={snippetForProfile({
             name: me.name,
             preferredAgents,
             modelMix,
             typicalTokenBurn,
           })}
-          className="mt-6 text-left"
-          textSize="text-[10px]"
+          textSize="text-[10.5px]"
         />
 
-        <p className="mt-6 text-[9px] uppercase tracking-[0.35em] text-muted">
-          your stack
-        </p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          {chips.map((chip) => (
-            <span
-              key={chip.label}
-              className="flex items-center gap-1.5 rounded-md border border-line bg-card-2 px-2.5 py-1.5 text-[10px] text-ink"
-            >
-              <ChipIcon chip={chip} />
-              {chip.label}
-            </span>
-          ))}
+        <div className="px-3.5 pt-4">
+          <Label>## stack</Label>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {chips.map((chip) => (
+              <Chip key={chip.label}>
+                <ChipIcon chip={chip} />
+                {chip.label}
+              </Chip>
+            ))}
+          </div>
         </div>
 
-        <p className="mt-6 text-[9px] uppercase tracking-[0.35em] text-muted">
-          token burn
-        </p>
-        <p className="mt-2 text-3xl text-blush">
-          {"{"} <span className="text-ink">{burnLabel(typicalTokenBurn)}</span>{" "}
-          {"}"}
-        </p>
-        <p className="mt-1 text-[11px] tracking-wide text-muted">
-          intensity band
-        </p>
-      </div>
+        <div className="mt-5 px-3.5">
+          <Label>## token burn</Label>
+          <p
+            className="mt-1.5 text-[26px] font-semibold leading-none tracking-[-0.02em]"
+            style={{ color: BURN_COLOR[typicalTokenBurn] }}
+          >
+            {burnLabel(typicalTokenBurn).toLowerCase()}
+          </p>
+          <div className="mt-3 flex gap-1">
+            {BURN_BANDS.map((band, i) => (
+              <span
+                key={band}
+                className="h-1.5 flex-1 rounded-full"
+                style={{
+                  background:
+                    i <= burnIndex
+                      ? BURN_COLOR[typicalTokenBurn]
+                      : "var(--rule-strong)",
+                  opacity: i <= burnIndex ? 1 - (burnIndex - i) * 0.18 : 1,
+                }}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-ink-4">
+            intensity band {burnIndex + 1} of {BURN_BANDS.length} · @
+            {handleOf(me.name)}
+          </p>
+        </div>
+      </Panel>
 
-      <div className="mt-auto pt-8">
-        <button
-          type="button"
-          onClick={() => void share()}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-wine py-4 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-        >
+      <div className="mt-auto pt-7">
+        <Button size="lg" onClick={() => void share()} className="w-full">
           <ShareIcon className="h-4 w-4" />
-          {copied ? "Copied to clipboard" : "Share your card"}
-        </button>
-        <Link
+          {copied ? "Copied to clipboard" : "Share your release"}
+        </Button>
+        <ButtonLink
           href="/discover"
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-line-bright py-4 text-sm tracking-wide text-blush transition hover:border-rose"
+          variant="ghost"
+          size="lg"
+          className="mt-2 w-full"
         >
-          <HeartIcon className="h-4 w-4" />
-          Find matches
-        </Link>
+          Review open PRs
+        </ButtonLink>
       </div>
     </main>
   );
@@ -172,14 +188,14 @@ function Gate({
   cta: string;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-      <p className="font-serif text-3xl text-ink">{title}</p>
-      <Link
-        href={href}
-        className="mt-8 w-full rounded-full bg-wine py-4 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-      >
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-10">
+      <p className="text-[10px] text-ink-4">$ git describe --tags</p>
+      <h1 className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-ink">
+        {title}
+      </h1>
+      <ButtonLink href={href} size="lg" className="mt-7 w-full">
         {cta}
-      </Link>
+      </ButtonLink>
     </main>
   );
 }

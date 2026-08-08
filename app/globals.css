@@ -1,61 +1,202 @@
 @import "tailwindcss";
 
+/*
+  SWEnder is a code editor that happens to be a dating app.
+
+  Two rules hold the whole system together:
+  1. Surfaces are one hue (blue-charcoal) and differ only in lightness, so
+     stacking reads as elevation instead of as separate "worlds".
+  2. Every color is a syntax or diff color, so color always means something:
+     green approves, red closes, amber requests changes, keyword pink merges.
+*/
+
 :root {
-  --background: #0b0507;
-  --foreground: #f3e9e6;
+  color-scheme: dark;
+
+  /* Editor chrome — one hue, lightness only */
+  --editor: #0a0d13;
+  --panel: #0f131b;
+  --panel-raised: #151a25;
+  --overlay: #1c2231;
+  --inset: #06080e;
+  --gutter: #101520;
+
+  /* Rules — findable when you look, invisible when you don't */
+  --rule: rgba(226, 236, 255, 0.07);
+  --rule-strong: rgba(226, 236, 255, 0.12);
+  --rule-loud: rgba(226, 236, 255, 0.2);
+
+  /* Ink — four levels */
+  --ink: #e8eef7;
+  --ink-2: #a6b2c4;
+  --ink-3: #6c7787;
+  --ink-4: #454e5d;
+
+  /* Syntax palette (Dracula-adjacent, desaturated for a dark UI) */
+  --kw: #ff79c6;
+  --kw-deep: #d84b9c;
+  --str: #e8c96a;
+  --fn: #7ad9ee;
+  --type: #5fd7c4;
+  --num: #bd93f9;
+  --cmt: #5d6674;
+
+  /* Review states — diff semantics */
+  --added: #58d977;
+  --deleted: #ff6b6b;
+  --pending: #ffb86c;
+
+  /* Radius — editors are squarer than social apps */
+  --r-1: 3px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-4: 14px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-editor: var(--editor);
+  --color-panel: var(--panel);
+  --color-raised: var(--panel-raised);
+  --color-overlay: var(--overlay);
+  --color-inset: var(--inset);
+  --color-gutter: var(--gutter);
 
-  /* SWEnder palette */
-  --color-ink: #f3e9e6;
-  --color-muted: #a08791;
-  --color-faint: #6e5560;
-  --color-wine: #7c1d31;
-  --color-wine-deep: #57121f;
-  --color-wine-hover: #93253c;
-  --color-rose: #c9556b;
-  --color-blush: #e8a0ab;
-  --color-card: #150a0e;
-  --color-card-2: #1d0d13;
-  --color-line: #3a1620;
-  --color-line-bright: #6d2537;
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-rule-loud: var(--rule-loud);
 
-  --font-sans: var(--font-geist-mono);
-  --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-playfair);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+
+  --color-kw: var(--kw);
+  --color-kw-deep: var(--kw-deep);
+  --color-str: var(--str);
+  --color-fn: var(--fn);
+  --color-type: var(--type);
+  --color-num: var(--num);
+  --color-cmt: var(--cmt);
+
+  --color-added: var(--added);
+  --color-deleted: var(--deleted);
+  --color-pending: var(--pending);
+
+  --radius-xs: var(--r-1);
+  --radius-sm: var(--r-2);
+  --radius-md: var(--r-3);
+  --radius-lg: var(--r-4);
+
+  --font-sans: var(--font-jetbrains);
+  --font-mono: var(--font-jetbrains);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  /* Monospaced UI throughout; serif is reserved for display headlines */
-  font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  background: var(--editor);
+  color: var(--ink);
+  /* One typeface, everywhere. Monospace is the product's voice, and it gets
+     tabular figures for free so no counter or timestamp ever shifts. */
+  font-family: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+  font-feature-settings: "calt" 1;
 }
 
-/* Ambient dark-romance vignette behind the phone-width column */
-.romance-bg {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124, 29, 49, 0.28), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 85% 100%, rgba(124, 29, 49, 0.18), transparent 70%),
-    #0b0507;
+p,
+li {
+  text-wrap: pretty;
 }
 
-/* Ornate corner-frame used on the persona card */
-.ornate-frame {
-  position: relative;
-  border: 1px solid var(--color-line-bright);
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* Selection reads like an editor selection, not a browser default. */
+::selection {
+  background: rgba(255, 121, 198, 0.26);
+  color: var(--ink);
+}
+
+/* Focus is the editor's selection blue, which keeps pink scarce. */
+:focus-visible {
+  outline: none;
   box-shadow:
-    inset 0 0 0 4px #150a0e,
-    inset 0 0 0 5px rgba(201, 85, 107, 0.35);
+    0 0 0 2px var(--editor),
+    0 0 0 3.5px var(--fn);
+  border-radius: var(--r-2);
 }
 
-@keyframes float-up {
+/* Scrollbars: part of the chrome, so they get designed too. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-loud) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 99px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--rule-loud);
+}
+
+/*
+  App canvas: graph paper from the CS building whiteboard, plus the pink glow
+  of a monitor at 1am. One texture only, at the threshold of visibility.
+*/
+.canvas {
+  background-color: var(--editor);
+  background-image:
+    radial-gradient(
+      ellipse 90% 40% at 50% -5%,
+      rgba(255, 121, 198, 0.08),
+      transparent 70%
+    ),
+    linear-gradient(to right, rgba(226, 236, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 236, 255, 0.022) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    24px 24px,
+    24px 24px;
+}
+
+/* The blinking block caret that ends the wordmark. */
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  background: var(--kw);
+  animation: caret-blink 1.15s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -63,47 +204,62 @@ body {
   }
 }
 
-.float-up {
-  animation: float-up 0.45s ease-out both;
+.rise {
+  animation: rise 0.24s var(--ease-out) both;
 }
 
-@keyframes stamp-pop {
+@keyframes pop {
   from {
     opacity: 0;
-    transform: scale(1.35) rotate(var(--stamp-rot, -12deg));
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1) rotate(var(--stamp-rot, -12deg));
+    transform: scale(1);
   }
 }
 
-.swipe-stamp {
-  animation: stamp-pop 0.22s ease-out both;
+.pop {
+  animation: pop 0.16s var(--ease-out) both;
 }
 
-/* iMessage-style typing indicator */
-@keyframes typing-dot {
+/* Streaming/agent thinking indicator. */
+@keyframes blip {
   0%,
   60%,
   100% {
-    opacity: 0.28;
+    opacity: 0.25;
     transform: translateY(0);
   }
   30% {
     opacity: 1;
-    transform: translateY(-3px);
+    transform: translateY(-2.5px);
   }
 }
 
-.typing-dot {
-  animation: typing-dot 1.2s ease-in-out infinite;
+.blip {
+  animation: blip 1.1s var(--ease-in-out) infinite;
 }
 
-.typing-dot:nth-child(2) {
-  animation-delay: 0.15s;
+.blip:nth-child(2) {
+  animation-delay: 0.14s;
 }
 
-.typing-dot:nth-child(3) {
-  animation-delay: 0.3s;
+.blip:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pop,
+  .blip,
+  .caret {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
 }

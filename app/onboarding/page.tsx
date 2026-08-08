@@ -1,16 +1,18 @@
 "use client";
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AgentLogo, CheckIcon, HeartIcon, ModelBadge } from "@/components/icons";
+import { CodePane } from "@/components/CodePane";
+import { AgentLogo, ModelBadge } from "@/components/icons";
+import { Button, ButtonLink, Label, Panel } from "@/components/ui";
 import { api } from "@/convex/_generated/api";
 import {
   AGENTS,
   DEFAULT_ANSWERS,
   MODEL_PRESETS,
   TOKEN_BURNS,
+  draftFingerprint,
   type OnboardingAnswers,
   type TokenBurnBand,
 } from "@/lib/swender";
@@ -107,92 +109,93 @@ export default function Onboarding() {
 
   if (!isAuthenticated) {
     return (
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-        <p className="font-serif text-3xl text-ink">
-          Sign in to build your twin
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-10">
+        <p className="text-[10px] text-ink-4">$ swender init</p>
+        <h1 className="mt-3 text-[20px] font-semibold tracking-[-0.02em] text-ink">
+          Sign in to write your fingerprint
+        </h1>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-3">
+          Your AI coding fingerprint syncs to the campus index once you&apos;re
+          authenticated.
         </p>
-        <p className="mt-3 text-xs leading-relaxed tracking-wide text-muted">
-          Your AI coding fingerprint syncs once you&apos;re authenticated.
-        </p>
-        <Link
-          href="/sign-in"
-          className="mt-8 w-full rounded-full bg-wine py-4 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-        >
+        <ButtonLink href="/sign-in" size="lg" className="mt-7 w-full">
           Sign in
-        </Link>
+        </ButtonLink>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-center gap-2.5">
-        <HeartIcon filled className="h-4 w-4 text-rose" />
-        <span className="font-serif text-2xl text-ink">SWEnder</span>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 py-7">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[11px] text-ink-3">
+          <span className="text-ink-4">$ </span>
+          swender init
+          <span className="text-cmt"> --interactive</span>
+        </p>
+        <p className="text-[10px] text-ink-4">
+          step {step}/{TOTAL_STEPS}
+        </p>
       </div>
 
-      {/* Progress */}
-      <div className="mt-7 flex items-center gap-3">
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-line/60">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-wine to-rose transition-all duration-300"
-            style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+      {/* Progress as a test-suite bar: segments pass as you go. */}
+      <div className="mt-3 flex gap-1">
+        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+          <span
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+              i + 1 < step
+                ? "bg-added"
+                : i + 1 === step
+                  ? "bg-kw"
+                  : "bg-rule-strong"
+            }`}
           />
-        </div>
-        <span className="text-[11px] tracking-wide text-muted">
-          {step}/{TOTAL_STEPS}
-        </span>
+        ))}
       </div>
 
-      {/* Heart divider */}
-      <div className="mt-8 flex items-center justify-center gap-3 text-rose/70">
-        <span className="h-px w-16 bg-line-bright" />
-        <HeartIcon className="h-3.5 w-3.5" />
-        <span className="h-px w-16 bg-line-bright" />
-      </div>
-
-      <div key={step} className="float-up mt-8 flex flex-1 flex-col">
+      <div key={step} className="rise mt-8 flex flex-1 flex-col">
         {step === 1 && (
-          <StepShell title={<>What should we <Rose>call</Rose> you?</>}>
-            <input
-              autoFocus
+          <Step title="What should we call you?" hint="shows on your PR">
+            <Field
+              token="name"
               value={answers.name}
-              onChange={(e) => set({ name: e.target.value })}
-              placeholder="your_name"
-              className="w-full rounded-xl border border-line bg-card px-5 py-4 text-sm text-ink placeholder:text-faint focus:border-rose focus:outline-none"
+              onChange={(v) => set({ name: v })}
+              placeholder="ada lovelace"
+              autoFocus
             />
-          </StepShell>
+          </Step>
         )}
 
         {step === 2 && (
-          <StepShell
-            title={<>Where do you <Rose>ship</Rose> from?</>}
-            subtitle="school or university — optional"
+          <Step
+            title="Where do you ship from?"
+            hint="school or campus — optional, but it unlocks local matches"
           >
-            <input
-              autoFocus
+            <Field
+              token="campus"
               value={answers.school}
-              onChange={(e) => set({ school: e.target.value })}
-              placeholder="e.g. UT Austin, MIT, self-taught"
-              className="w-full rounded-xl border border-line bg-card px-5 py-4 text-sm text-ink placeholder:text-faint focus:border-rose focus:outline-none"
+              onChange={(v) => set({ school: v })}
+              placeholder="UT Austin"
+              autoFocus
             />
-          </StepShell>
+          </Step>
         )}
 
         {step === 3 && (
-          <StepShell
-            title={<>Which <Rose>agents</Rose> do you vibe with?</>}
-            subtitle="pick every tool in your daily stack"
+          <Step
+            title="Which agents are in your daily stack?"
+            hint="pick every tool you actually open"
           >
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
               {AGENTS.map((agent) => {
                 const on = answers.preferredAgents.includes(agent.id);
                 return (
-                  <Row
+                  <Choice
                     key={agent.id}
                     on={on}
-                    icon={<AgentLogo agentId={agent.id} className="h-6 w-6" />}
+                    multi
+                    icon={<AgentLogo agentId={agent.id} className="h-5 w-5" />}
                     label={agent.label}
                     onClick={() =>
                       set({
@@ -207,22 +210,22 @@ export default function Onboarding() {
                 );
               })}
             </div>
-          </StepShell>
+          </Step>
         )}
 
         {step === 4 && (
-          <StepShell
-            title={<>What&apos;s your <Rose>model mix</Rose>?</>}
-            subtitle="rough share of coding work by family"
+          <Step
+            title="What's your model mix?"
+            hint="rough share of coding work by family"
           >
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
               {MODEL_PRESETS.map((preset) => {
                 const on =
                   Math.abs(preset.mix.opus - answers.modelMix.opus) < 0.02 &&
                   Math.abs(preset.mix.gpt - answers.modelMix.gpt) < 0.02 &&
                   Math.abs(preset.mix.gemini - answers.modelMix.gemini) < 0.02;
                 return (
-                  <Row
+                  <Choice
                     key={preset.id}
                     on={on}
                     icon={
@@ -233,15 +236,12 @@ export default function Onboarding() {
                       </span>
                     }
                     label={preset.label}
-                    hint={`opus ${Math.round(preset.mix.opus * 100)}% · gpt ${Math.round(
-                      preset.mix.gpt * 100,
-                    )}% · gemini ${Math.round(preset.mix.gemini * 100)}%`}
                     onClick={() => set({ modelMix: preset.mix })}
                   />
                 );
               })}
             </div>
-            <div className="mt-5 space-y-2">
+            <div className="mt-4 space-y-2">
               <MixBar label="opus" value={answers.modelMix.opus} color="#D97757" />
               <MixBar label="gpt" value={answers.modelMix.gpt} color="#10A37F" />
               <MixBar
@@ -250,17 +250,21 @@ export default function Onboarding() {
                 color="#4285F4"
               />
             </div>
-          </StepShell>
+          </Step>
         )}
 
         {step === 5 && (
-          <StepShell title={<>Typical <Rose>token burn</Rose>?</>}>
-            <div className="flex flex-col gap-3">
+          <Step title="Typical token burn?" hint="be honest, the index knows">
+            <div className="flex flex-col gap-1.5">
               {TOKEN_BURNS.map((burn) => (
-                <Row
+                <Choice
                   key={burn.id}
                   on={answers.typicalTokenBurn === burn.id}
-                  icon={<Glyph>{burn.id.slice(0, 3)}</Glyph>}
+                  icon={
+                    <span className="flex h-5 w-8 items-center justify-center rounded-xs border border-rule-strong bg-inset text-[9px] text-ink-3">
+                      {burn.id.slice(0, 3)}
+                    </span>
+                  }
                   label={burn.label}
                   hint={burn.hint}
                   onClick={() =>
@@ -269,49 +273,63 @@ export default function Onboarding() {
                 />
               ))}
             </div>
-          </StepShell>
+          </Step>
         )}
 
         {step === 6 && (
-          <StepShell
-            title={<>Drop your hottest <Rose>take</Rose>.</>}
-            subtitle="this goes on your card as your bio"
+          <Step
+            title="Drop your hottest take."
+            hint="this ships as your commit message"
           >
-            <textarea
-              autoFocus
-              value={answers.bio}
-              onChange={(e) => set({ bio: e.target.value })}
-              placeholder='e.g. "Good code is poetry. Great code is a love letter to the future."'
-              rows={4}
-              className="w-full resize-none rounded-xl border border-line bg-card px-5 py-4 text-sm leading-relaxed text-ink placeholder:text-faint focus:border-rose focus:outline-none"
-            />
-          </StepShell>
+            <div className="rounded-sm border border-rule bg-inset px-3 py-2.5 transition-colors duration-150 focus-within:border-fn/50">
+              <Label>commit message</Label>
+              <textarea
+                autoFocus
+                value={answers.bio}
+                onChange={(e) => set({ bio: e.target.value })}
+                placeholder="good code is poetry. great code is a love letter to the future."
+                rows={3}
+                className="mt-1.5 w-full resize-none bg-transparent text-[12.5px] leading-relaxed text-ink placeholder:text-ink-4 focus:outline-none focus-visible:shadow-none"
+              />
+            </div>
+          </Step>
         )}
 
         <div className="mt-auto pt-8">
+          {/* The file being authored, updating on every answer. */}
+          <Panel filename="fingerprint.ts" modified className="mb-4">
+            <CodePane
+              rows={draftFingerprint(answers)}
+              textSize="text-[10px]"
+            />
+          </Panel>
+
           {error && (
-            <p className="mb-3 text-center text-xs text-rose">{error}</p>
+            <p role="alert" className="mb-3 text-[11px] text-deleted">
+              {error}
+            </p>
           )}
-          <button
-            type="button"
+          <Button
+            size="lg"
             onClick={() => void next()}
             disabled={!canContinue() || saving}
-            className="w-full rounded-full bg-wine py-4 text-sm font-semibold tracking-wide text-ink transition enabled:hover:bg-wine-hover disabled:opacity-40"
+            className="w-full"
           >
             {step === TOTAL_STEPS
               ? saving
-                ? "Saving…"
-                : "Reveal my twin"
-              : "Continue →"}
-          </button>
+                ? "committing…"
+                : "Commit fingerprint"
+              : "Continue"}
+          </Button>
           {step > 1 && (
-            <button
-              type="button"
+            <Button
+              variant="quiet"
+              size="sm"
               onClick={() => setStep(step - 1)}
-              className="mt-3 w-full py-1 text-xs tracking-wide text-muted hover:text-blush"
+              className="mt-2 w-full"
             >
               ← back
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -319,15 +337,94 @@ export default function Onboarding() {
   );
 }
 
-function Rose({ children }: { children: React.ReactNode }) {
-  return <span className="italic text-rose">{children}</span>;
+function Step({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h1 className="text-[19px] font-semibold leading-snug tracking-[-0.02em] text-ink">
+        {title}
+      </h1>
+      {hint && <p className="mt-1.5 text-[11.5px] text-ink-3">{hint}</p>}
+      <div className="mt-6">{children}</div>
+    </div>
+  );
 }
 
-function Glyph({ children }: { children: React.ReactNode }) {
+/** A text field that reads as the key it's setting in the file. */
+function Field({
+  token,
+  value,
+  onChange,
+  placeholder,
+  autoFocus,
+}: {
+  token: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  autoFocus?: boolean;
+}) {
   return (
-    <span className="flex h-6 min-w-6 items-center justify-center rounded border border-line-bright bg-black/30 px-1 text-[10px] text-blush">
-      {children}
-    </span>
+    <div className="flex items-center gap-2 rounded-sm border border-rule bg-inset px-3 transition-colors duration-150 focus-within:border-fn/50">
+      <span className="shrink-0 text-[12.5px] text-cmt">{token}:</span>
+      <input
+        autoFocus={autoFocus}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-transparent py-3 text-[12.5px] text-str placeholder:text-ink-4 focus:outline-none focus-visible:shadow-none"
+      />
+    </div>
+  );
+}
+
+function Choice({
+  on,
+  multi = false,
+  icon,
+  label,
+  hint,
+  onClick,
+}: {
+  on: boolean;
+  multi?: boolean;
+  icon?: React.ReactNode;
+  label: string;
+  hint?: string;
+  onClick: () => void;
+}) {
+  const glyph = multi ? (on ? "[x]" : "[ ]") : on ? "(o)" : "( )";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`flex items-center gap-3 rounded-sm border px-3 py-3 text-left transition-colors duration-150 ${
+        on
+          ? "border-kw/50 bg-kw/8"
+          : "border-rule bg-panel hover:border-rule-strong hover:bg-raised"
+      }`}
+    >
+      <span
+        className={`shrink-0 text-[12px] ${on ? "text-kw" : "text-ink-4"}`}
+      >
+        {glyph}
+      </span>
+      {icon}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[12.5px] text-ink">{label}</span>
+        {hint && (
+          <span className="mt-0.5 block text-[10px] text-ink-3">{hint}</span>
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -342,79 +439,16 @@ function MixBar({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-12 text-[10px] tracking-wide text-muted">{label}</span>
-      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-line/60">
+      <span className="w-12 text-[10px] text-cmt">{label}</span>
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-inset">
         <span
-          className="block h-full rounded-full transition-all duration-300"
+          className="block h-full rounded-full transition-[width] duration-200 ease-[var(--ease-out)]"
           style={{ width: `${value * 100}%`, background: color }}
         />
       </span>
-      <span className="w-8 text-right text-[10px] text-faint">
+      <span className="w-8 text-right text-[10px] text-ink-3">
         {Math.round(value * 100)}%
       </span>
     </div>
-  );
-}
-
-function StepShell({
-  title,
-  subtitle,
-  children,
-}: {
-  title: React.ReactNode;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <h1 className="font-serif text-[2.1rem] leading-tight text-ink">
-        {title}
-      </h1>
-      {subtitle && (
-        <p className="mt-2 text-xs tracking-wide text-muted">{subtitle}</p>
-      )}
-      <div className="mt-8">{children}</div>
-    </div>
-  );
-}
-
-function Row({
-  on,
-  icon,
-  label,
-  hint,
-  onClick,
-}: {
-  on: boolean;
-  icon?: React.ReactNode;
-  label: string;
-  hint?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-4 rounded-xl border px-5 py-4 text-left transition ${
-        on
-          ? "border-rose bg-wine/25 shadow-[0_0_24px_rgba(124,29,49,0.35)]"
-          : "border-line bg-card hover:border-line-bright"
-      }`}
-    >
-      {icon}
-      <span className="flex-1">
-        <span className="block text-sm text-ink">{label}</span>
-        {hint && (
-          <span className="mt-0.5 block text-[10px] text-muted">{hint}</span>
-        )}
-      </span>
-      <span
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-          on ? "border-rose bg-rose text-background" : "border-faint"
-        }`}
-      >
-        {on && <CheckIcon className="h-3 w-3" />}
-      </span>
-    </button>
   );
 }

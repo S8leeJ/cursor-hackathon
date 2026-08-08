@@ -2,15 +2,18 @@
 
 import { useConvexAuth, useQuery } from "convex/react";
 import Link from "next/link";
-import { BottomNav } from "@/components/BottomNav";
-import { CodePicture } from "@/components/CodePicture";
-import { HeartIcon } from "@/components/icons";
+import { AppShell, PageHeader } from "@/components/AppShell";
+import { MergeIcon } from "@/components/icons";
+import { Avatar } from "@/components/Identicon";
+import { EmptyState, Loading, Panel } from "@/components/ui";
 import { api } from "@/convex/_generated/api";
 import {
+  accentForId,
   computePersona,
-  gradientForId,
-  snippetFilename,
-  snippetForProfile,
+  handleOf,
+  prNumberFor,
+  shortHashFor,
+  stableAgo,
 } from "@/lib/swender";
 
 export default function Matches() {
@@ -21,122 +24,121 @@ export default function Matches() {
     isAuthenticated && me?.hasFingerprint ? {} : "skip",
   );
 
-  return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <main className="flex-1 px-5 pb-4 pt-6">
-        <h1 className="font-serif text-4xl text-ink">Merges</h1>
+  const loading = authLoading || (isAuthenticated && me === undefined);
 
-        {authLoading || (isAuthenticated && me === undefined) ? (
-          <p className="mt-16 text-center text-xs tracking-wide text-muted">
-            Loading…
-          </p>
-        ) : !isAuthenticated ? (
-          <Empty
-            body="sign in to see mutual accepts that merged"
-            href="/sign-in"
-            cta="Sign in"
-          />
-        ) : !me?.hasFingerprint ? (
-          <Empty
-            body="finish your fingerprint first, then review open PRs"
-            href="/onboarding"
-            cta="Get started"
-          />
-        ) : matches === undefined ? (
-          <p className="mt-16 text-center text-xs tracking-wide text-muted">
-            Loading…
-          </p>
-        ) : matches.length === 0 ? (
-          <>
-            <p className="mt-1.5 text-xs tracking-wide text-muted">
-              no merges yet — review open PRs
-            </p>
-            <Empty
-              body="your matches array is empty. time to iterate."
-              href="/discover"
-              cta="Review open PRs"
-              glyph="{ }"
-            />
-          </>
-        ) : (
-          <>
-            <p className="mt-1.5 text-xs tracking-wide text-muted">
-              merged without conflicts · {matches.length} twin
-              {matches.length === 1 ? "" : "s"}
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              {matches.map((p) => {
-                const persona = computePersona(p);
-                return (
-                  <Link
-                    key={p._id}
-                    href="/messages"
-                    className={`float-up overflow-hidden rounded-2xl border border-line bg-gradient-to-b ${gradientForId(p._id)} transition hover:border-line-bright`}
-                  >
-                    {p.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.avatarUrl}
-                        alt={p.name}
-                        className="h-36 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="px-3 pt-3">
-                        <CodePicture
-                          filename={snippetFilename(p.name)}
-                          lines={snippetForProfile(p).slice(0, 4)}
-                          textSize="text-[7px]"
-                        />
-                      </div>
-                    )}
-                    <div className="bg-black/50 px-3.5 py-3">
-                      <p className="truncate font-serif text-lg text-ink">
-                        {p.name}
-                      </p>
-                      <p className="mt-1 truncate text-[10px] tracking-wide text-rose">
-                        {persona.title}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </main>
-      <BottomNav />
-    </div>
-  );
-}
-
-function Empty({
-  body,
-  href,
-  cta,
-  glyph,
-}: {
-  body: string;
-  href: string;
-  cta: string;
-  glyph?: string;
-}) {
   return (
-    <div className="mt-16 flex flex-col items-center text-center">
-      {glyph ? (
-        <p className="text-5xl text-line-bright">{glyph}</p>
+    <AppShell
+      path="~/merges"
+      status={
+        matches?.length ? (
+          <span className="flex items-center gap-1.5 text-kw">
+            <MergeIcon className="h-3 w-3" />
+            {matches.length} merged
+          </span>
+        ) : undefined
+      }
+    >
+      <PageHeader
+        crumb="swender / merges"
+        title="Merged"
+        meta={
+          matches?.length
+            ? `${matches.length} branch${matches.length === 1 ? "" : "es"} merged into main`
+            : "mutual approvals land here"
+        }
+      />
+
+      {loading ? (
+        <Loading what="git log --merges" />
+      ) : !isAuthenticated ? (
+        <EmptyState
+          glyph={<MergeIcon className="h-5 w-5" />}
+          code="401 unauthorized"
+          title="Sign in to see merges"
+          body="a merge happens when you and someone else both hit approve."
+          href="/sign-in"
+          cta="Sign in"
+        />
+      ) : !me?.hasFingerprint ? (
+        <EmptyState
+          glyph={<MergeIcon className="h-5 w-5" />}
+          code="412 precondition failed"
+          title="Fingerprint first"
+          body="write your fingerprint, then start reviewing the open queue."
+          href="/onboarding"
+          cta="Build my fingerprint"
+        />
+      ) : matches === undefined ? (
+        <Loading what="git log --merges" />
+      ) : matches.length === 0 ? (
+        <EmptyState
+          glyph={<MergeIcon className="h-5 w-5" />}
+          code="0 commits ahead"
+          title="Nothing merged yet"
+          body="your matches array is empty. review a few open PRs and something will land."
+          href="/discover"
+          cta="Review open PRs"
+        />
       ) : (
-        <HeartIcon className="h-12 w-12 text-line-bright" />
+        <Panel
+          filename="git log --merges --oneline"
+          className="mt-5"
+          bodyClassName="relative py-1.5"
+        >
+          {/* The trunk every merge lands on. */}
+          <span
+            aria-hidden
+            className="absolute bottom-4 left-[27px] top-4 w-px bg-rule-strong"
+          />
+          {matches.map((p, i) => {
+            const persona = computePersona(p);
+            const accent = accentForId(p._id);
+            return (
+              <Link
+                key={p._id}
+                href="/messages"
+                className="rise group relative flex items-center gap-3 px-3 py-2.5 transition-colors duration-150 hover:bg-raised"
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              >
+                {/* Merge commit node on the trunk. */}
+                <span
+                  aria-hidden
+                  className="relative z-10 flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 bg-panel transition-colors duration-150 group-hover:bg-raised"
+                  style={{ borderColor: accent }}
+                />
+                <Avatar
+                  id={p._id}
+                  name={p.name}
+                  src={p.avatarUrl}
+                  size={36}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-ink">
+                      {p.name}
+                    </span>
+                    <span className="ml-auto shrink-0 text-[10px] text-ink-4">
+                      {stableAgo(p._id)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-ink-3">
+                    <span className="text-cmt">{shortHashFor(p._id)}</span>
+                    <span className="truncate">
+                      merge: {handleOf(p.name)} → main
+                    </span>
+                  </span>
+                  <span
+                    className="mt-1 block truncate text-[10.5px]"
+                    style={{ color: accent }}
+                  >
+                    {persona.title} · #{prNumberFor(p._id)}
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+        </Panel>
       )}
-      <p className="mt-5 max-w-60 text-xs leading-relaxed tracking-wide text-muted">
-        {body}
-      </p>
-      <Link
-        href={href}
-        className="mt-6 flex items-center gap-2 rounded-full bg-wine px-8 py-3 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
-      >
-        <HeartIcon filled className="h-4 w-4" />
-        {cta}
-      </Link>
-    </div>
+    </AppShell>
   );
 }
