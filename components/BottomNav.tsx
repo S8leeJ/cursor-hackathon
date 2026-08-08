@@ -2,32 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChatIcon, HeartIcon, MailIcon, UserIcon } from "@/components/icons";
 
 const TABS = [
-  { href: "/discover", label: "Discover", icon: "♥" },
-  { href: "/matches", label: "Matches", icon: "💬" },
-  { href: "/messages", label: "Messages", icon: "✉" },
-  { href: "/profile", label: "Profile", icon: "👤" },
+  { href: "/discover", label: "Discover", Icon: HeartIcon },
+  { href: "/matches", label: "Matches", Icon: ChatIcon },
+  { href: "/messages", label: "Messages", Icon: MailIcon },
+  { href: "/profile", label: "Profile", Icon: UserIcon },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="sticky bottom-0 mx-auto w-full max-w-md border-t border-line bg-background/95 backdrop-blur">
-      <div className="flex items-center justify-around py-3">
-        {TABS.map((tab) => {
-          const active = pathname === tab.href;
+      <div className="flex items-stretch justify-around pb-2 pt-2.5">
+        {TABS.map(({ href, label, Icon }) => {
+          const active = pathname === href;
           return (
             <Link
-              key={tab.href}
-              href={tab.href}
-              className={`flex flex-col items-center gap-1 text-[11px] transition ${
+              key={href}
+              href={href}
+              className={`flex w-16 flex-col items-center gap-1.5 text-[10px] tracking-wide transition ${
                 active ? "text-rose" : "text-faint hover:text-muted"
               }`}
             >
-              <span className="text-base leading-none">{tab.icon}</span>
-              {tab.label}
-              {active && <span className="h-0.5 w-6 rounded-full bg-rose" />}
+              <Icon
+                className="h-5 w-5"
+                {...(Icon === HeartIcon ? { filled: active } : {})}
+              />
+              {label}
+              <span
+                className={`h-0.5 w-6 rounded-full ${active ? "bg-rose" : "bg-transparent"}`}
+              />
             </Link>
           );
         })}

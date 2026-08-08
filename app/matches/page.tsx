@@ -3,10 +3,14 @@
 import { useConvexAuth, useQuery } from "convex/react";
 import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
+import { CodePicture } from "@/components/CodePicture";
+import { HeartIcon } from "@/components/icons";
 import { api } from "@/convex/_generated/api";
 import {
   computePersona,
   gradientForId,
+  snippetFilename,
+  snippetForProfile,
 } from "@/lib/swender";
 
 export default function Matches() {
@@ -19,39 +23,45 @@ export default function Matches() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <main className="flex-1 px-5 pt-6 pb-4">
+      <main className="flex-1 px-5 pb-4 pt-6">
         <h1 className="font-serif text-4xl text-ink">Matches</h1>
 
         {authLoading || (isAuthenticated && me === undefined) ? (
-          <p className="mt-16 text-center text-sm text-muted">Loading…</p>
+          <p className="mt-16 text-center text-xs tracking-wide text-muted">
+            Loading…
+          </p>
         ) : !isAuthenticated ? (
           <Empty
-            body="Sign in to see mutual fingerprint matches."
+            body="sign in to see mutual fingerprint matches"
             href="/sign-in"
             cta="Sign in"
           />
         ) : !me?.hasFingerprint ? (
           <Empty
-            body="Finish your fingerprint first, then start swiping."
+            body="finish your fingerprint first, then start swiping"
             href="/onboarding"
             cta="Get started"
           />
         ) : matches === undefined ? (
-          <p className="mt-16 text-center text-sm text-muted">Loading…</p>
+          <p className="mt-16 text-center text-xs tracking-wide text-muted">
+            Loading…
+          </p>
         ) : matches.length === 0 ? (
           <>
-            <p className="mt-1 text-sm text-muted">No matches yet — go swipe.</p>
+            <p className="mt-1.5 text-xs tracking-wide text-muted">
+              no matches yet — go swipe
+            </p>
             <Empty
-              body="Your matches array is empty. Time to iterate."
+              body="your matches array is empty. time to iterate."
               href="/discover"
-              cta="♥ Start swiping"
+              cta="Start swiping"
               glyph="{ }"
             />
           </>
         ) : (
           <>
-            <p className="mt-1 text-sm text-muted">
-              Merged without conflicts · {matches.length} twin
+            <p className="mt-1.5 text-xs tracking-wide text-muted">
+              merged without conflicts · {matches.length} twin
               {matches.length === 1 ? "" : "s"}
             </p>
             <div className="mt-6 grid grid-cols-2 gap-4">
@@ -61,26 +71,30 @@ export default function Matches() {
                   <Link
                     key={p._id}
                     href="/messages"
-                    className={`float-up overflow-hidden rounded-2xl border border-line bg-gradient-to-b ${gradientForId(p._id)}`}
+                    className={`float-up overflow-hidden rounded-2xl border border-line bg-gradient-to-b ${gradientForId(p._id)} transition hover:border-line-bright`}
                   >
-                    <div className="flex h-36 items-center justify-center">
-                      <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-line-bright bg-black/30 font-serif text-3xl text-blush">
-                        {p.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.avatarUrl}
-                            alt={p.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          p.name.charAt(0).toUpperCase()
-                        )}
-                      </span>
-                    </div>
-                    <div className="bg-black/50 px-3 py-3">
-                      <p className="font-serif text-lg text-ink">{p.name}</p>
-                      <p className="mt-0.5 truncate font-mono text-[10px] text-rose">
-                        {persona.emoji} {persona.title}
+                    {p.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.avatarUrl}
+                        alt={p.name}
+                        className="h-36 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="px-3 pt-3">
+                        <CodePicture
+                          filename={snippetFilename(p.name)}
+                          lines={snippetForProfile(p).slice(0, 4)}
+                          textSize="text-[7px]"
+                        />
+                      </div>
+                    )}
+                    <div className="bg-black/50 px-3.5 py-3">
+                      <p className="truncate font-serif text-lg text-ink">
+                        {p.name}
+                      </p>
+                      <p className="mt-1 truncate text-[10px] tracking-wide text-rose">
+                        {persona.title}
                       </p>
                     </div>
                   </Link>
@@ -99,7 +113,7 @@ function Empty({
   body,
   href,
   cta,
-  glyph = "♥",
+  glyph,
 }: {
   body: string;
   href: string;
@@ -108,12 +122,19 @@ function Empty({
 }) {
   return (
     <div className="mt-16 flex flex-col items-center text-center">
-      <p className="font-mono text-5xl text-line-bright">{glyph}</p>
-      <p className="mt-4 max-w-60 text-sm text-muted">{body}</p>
+      {glyph ? (
+        <p className="text-5xl text-line-bright">{glyph}</p>
+      ) : (
+        <HeartIcon className="h-12 w-12 text-line-bright" />
+      )}
+      <p className="mt-5 max-w-60 text-xs leading-relaxed tracking-wide text-muted">
+        {body}
+      </p>
       <Link
         href={href}
-        className="mt-6 rounded-full bg-wine px-8 py-3 text-sm font-semibold text-ink transition hover:bg-wine-hover"
+        className="mt-6 flex items-center gap-2 rounded-full bg-wine px-8 py-3 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
       >
+        <HeartIcon filled className="h-4 w-4" />
         {cta}
       </Link>
     </div>

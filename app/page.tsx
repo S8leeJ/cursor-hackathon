@@ -1,69 +1,68 @@
 import Link from "next/link";
+import { CodePicture } from "@/components/CodePicture";
+import { BracketHeart, HeartIcon } from "@/components/icons";
+import { HERO_SNIPPET } from "@/lib/swender";
 
 const FLOATERS = [
-  { symbol: "</>", top: "8%", left: "10%" },
-  { symbol: "♥", top: "14%", left: "78%" },
-  { symbol: "{ }", top: "34%", left: "6%" },
-  { symbol: "♥", top: "28%", left: "48%" },
-  { symbol: "=>", top: "12%", left: "42%" },
-  { symbol: "♥", top: "44%", left: "86%" },
-  { symbol: "git", top: "50%", left: "30%" },
-  { symbol: "♥", top: "58%", left: "62%" },
+  { symbol: "</>", top: "10%", left: "12%" },
+  { symbol: "<3", top: "16%", left: "76%" },
+  { symbol: "{ }", top: "38%", left: "8%" },
+  { symbol: "=>", top: "8%", left: "44%" },
+  { symbol: "&&", top: "30%", left: "60%" },
+  { symbol: "<3", top: "46%", left: "84%" },
+  { symbol: "git", top: "52%", left: "26%" },
 ];
 
 export default function Landing() {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-6 py-14 text-center">
-      <p className="font-serif text-3xl tracking-wide text-ink">
-        {"{"}
-        <span className="mx-1 text-rose">♥</span>
-        {"}"}
-      </p>
-      <h1 className="mt-2 font-serif text-5xl text-ink">Token Twin</h1>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-6 py-12 text-center">
+      <BracketHeart className="h-8 w-16 text-ink" />
+      <h1 className="mt-3 font-serif text-5xl tracking-tight text-ink">
+        Token Twin
+      </h1>
 
-      <h2 className="mt-10 font-serif text-4xl leading-tight text-ink float-up">
+      <h2 className="mt-10 font-serif text-[2.6rem] leading-[1.15] text-ink float-up">
         Find your
         <br />
         compile-time <span className="italic text-rose">match</span>
       </h2>
-      <p className="mt-3 text-sm text-muted">
+      <p className="mt-4 text-[13px] leading-relaxed tracking-wide text-muted">
         Match college SEs by AI coding fingerprint.
       </p>
 
-      {/* Decorative hero: two devs, one glowing terminal */}
-      <div className="relative mt-10 w-full flex-1 overflow-hidden rounded-3xl border border-line bg-gradient-to-b from-[#1d0b11] via-[#2a0f18] to-[#12060a]">
+      {/* Hero: terminal love letter */}
+      <div className="relative mt-10 flex w-full flex-1 flex-col justify-end overflow-hidden rounded-2xl border border-line bg-gradient-to-b from-[#1d0b11] via-[#160910] to-[#0e0509] px-6 pb-7 pt-16">
         {FLOATERS.map((f, i) => (
           <span
             key={i}
-            className="absolute font-mono text-xs text-rose/40"
+            className="absolute text-[11px] text-rose/35"
             style={{ top: f.top, left: f.left }}
           >
             {f.symbol}
           </span>
         ))}
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center pb-8">
-          <div className="rounded-lg border border-line-bright bg-black/60 px-5 py-4 font-mono text-[11px] leading-relaxed text-blush shadow-[0_0_40px_rgba(201,85,107,0.25)]">
-            <p className="text-faint">$ git commit -m</p>
-            <p>&quot;feat: fell in love&quot;</p>
-            <p className="mt-1 text-faint">2 hearts changed,</p>
-            <p className="text-faint">0 regressions</p>
-          </div>
-          <p className="mt-5 font-serif text-lg italic text-blush/80">
-            pair programming, but forever
-          </p>
-        </div>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(124,29,49,0.35),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_110%,rgba(124,29,49,0.4),transparent_65%)]" />
+
+        <CodePicture
+          filename="~/love — zsh"
+          lines={HERO_SNIPPET}
+          className="relative mx-auto w-full max-w-72"
+        />
+        <p className="relative mt-5 font-serif text-lg italic text-blush/80">
+          pair programming, but forever
+        </p>
       </div>
 
       <Link
         href="/onboarding"
-        className="mt-8 block w-full rounded-full bg-wine py-4 text-base font-semibold text-ink transition hover:bg-wine-hover"
+        className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-wine py-4 text-sm font-semibold tracking-wide text-ink transition hover:bg-wine-hover"
       >
+        <HeartIcon filled className="h-4 w-4" />
         Get started
       </Link>
       <Link
         href="/sign-in"
-        className="mt-4 text-sm text-muted transition hover:text-blush"
+        className="mt-4 text-xs tracking-wide text-muted underline-offset-4 transition hover:text-blush hover:underline"
       >
         I already have an account
       </Link>
