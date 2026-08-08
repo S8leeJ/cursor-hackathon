@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
 import {
   assertFingerprintComplete,
@@ -108,6 +109,10 @@ export const completeOnboarding = mutation({
       typicalTokenBurn: args.typicalTokenBurn,
       hasFingerprint: true,
       updatedAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, internal.peopleIndex.indexPerson, {
+      userId: user._id,
     });
 
     const updated = await ctx.db.get(user._id);

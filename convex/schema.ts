@@ -101,4 +101,17 @@ export default defineSchema({
     .index("by_from", ["fromUserId"])
     .index("by_from_to", ["fromUserId", "toUserId"])
     .index("by_to_action", ["toUserId", "action"]),
+
+  /**
+   * One Matchmaker agent thread per user (RAG people-matching chatbot).
+   * Message history lives in the @convex-dev/agent component; this table owns access.
+   */
+  matchChats: defineTable({
+    userId: v.id("users"),
+    threadId: v.string(),
+    title: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_thread", ["threadId"]),
 });

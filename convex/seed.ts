@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
@@ -481,6 +482,9 @@ export const seedDemo = internalMutation({
       });
       insertedIds.push(id);
     }
+
+    // Embed seed profiles into the people RAG index for the matchmaker chatbot.
+    await ctx.scheduler.runAfter(0, internal.peopleIndex.reindexAll, {});
 
     return {
       usersInserted: insertedIds.length,
