@@ -24,7 +24,7 @@ export default function Matches() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
       <main className="flex-1 px-5 pb-4 pt-6">
-        <h1 className="font-serif text-4xl text-ink">Matches</h1>
+        <h1 className="font-serif text-4xl text-ink">Merges</h1>
 
         {authLoading || (isAuthenticated && me === undefined) ? (
           <p className="mt-16 text-center text-xs tracking-wide text-muted">
@@ -32,13 +32,13 @@ export default function Matches() {
           </p>
         ) : !isAuthenticated ? (
           <Empty
-            body="sign in to see mutual fingerprint matches"
+            body="sign in to see mutual accepts that merged"
             href="/sign-in"
             cta="Sign in"
           />
         ) : !me?.hasFingerprint ? (
           <Empty
-            body="finish your fingerprint first, then start swiping"
+            body="finish your fingerprint first, then review open PRs"
             href="/onboarding"
             cta="Get started"
           />
@@ -49,12 +49,12 @@ export default function Matches() {
         ) : matches.length === 0 ? (
           <>
             <p className="mt-1.5 text-xs tracking-wide text-muted">
-              no matches yet — go swipe
+              no merges yet — review open PRs
             </p>
             <Empty
               body="your matches array is empty. time to iterate."
               href="/discover"
-              cta="Start swiping"
+              cta="Review open PRs"
               glyph="{ }"
             />
           </>

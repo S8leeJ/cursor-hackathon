@@ -13,9 +13,9 @@ import {
 import { BottomNav } from "@/components/BottomNav";
 import { CodePicture } from "@/components/CodePicture";
 import {
+  CheckIcon,
   ChipIcon,
   FilterIcon,
-  HeartIcon,
   StarIcon,
   VerifiedBadge,
   XIcon,
@@ -28,10 +28,15 @@ import {
   gradientForId,
   snippetFilename,
   snippetForProfile,
+  type ModelMix,
 } from "@/lib/swender";
 
 const SWIPE_THRESHOLD = 110;
+const UP_THRESHOLD = 90;
 const FLY_MS = 380;
+
+type ReviewAction = "accept" | "deny" | "request_changes";
+type ExitDir = "left" | "right" | "up";
 
 type PublicCandidate = {
   _id: Id<"users">;
@@ -45,6 +50,33 @@ type PublicCandidate = {
   matchScore: number;
 };
 
+const MODEL_LABELS: Record<keyof ModelMix, string> = {
+  opus: "Opus",
+  gpt: "GPT",
+  gemini: "Gemini",
+};
+
+function dominantModel(mix: ModelMix): keyof ModelMix {
+  return (Object.entries(mix) as [keyof ModelMix, number][]).sort(
+    (a, b) => b[1] - a[1],
+  )[0][0];
+}
+
+function modelChangeOptions(mix: ModelMix): {
+  from: string;
+  to: string;
+  label: string;
+}[] {
+  const from = dominantModel(mix);
+  return (Object.keys(MODEL_LABELS) as (keyof ModelMix)[])
+    .filter((m) => m !== from)
+    .map((to) => ({
+      from: MODEL_LABELS[from],
+      to: MODEL_LABELS[to],
+      label: `Switch from ${MODEL_LABELS[from]} → ${MODEL_LABELS[to]}`,
+    }));
+}
+
 export default function Discover() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const me = useQuery(api.users.current, isAuthenticated ? {} : "skip");
@@ -52,11 +84,13 @@ export default function Discover() {
     api.matching.discover,
     isAuthenticated && me?.hasFingerprint ? {} : "skip",
   );
-  const swipe = useMutation(api.matching.swipe);
+  const review = useMutation(api.matching.swipe);
 
   const [localPassed, setLocalPassed] = useState<Id<"users">[]>([]);
-  const [exiting, setExiting] = useState<"left" | "right" | null>(null);
+  const [exiting, setExiting] = useState<ExitDir | null>(null);
   const [matchFlash, setMatchFlash] = useState<string | null>(null);
+  const [changesFlash, setChangesFlash] = useState<string | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
   const [drag, setDrag] = useState({ x: 0, y: 0, active: false });
   const dragRef = useRef({
     pointerId: null as number | null,
@@ -75,21 +109,36 @@ export default function Discover() {
   const profile = deck[0];
   const nextProfile = deck[1];
 
-  const finishSwipe = useCallback(
-    async (liked: boolean, target: PublicCandidate) => {
+  const finishReview = useCallback(
+    async (
+      action: ReviewAction,
+      target: PublicCandidate,
+      extras?: {
+        comment?: string;
+        requestedChange?: { kind: "model"; from: string; to: string };
+      },
+    ) => {
       if (busyRef.current) return;
       busyRef.current = true;
-      setExiting(liked ? "right" : "left");
+      setRequestOpen(false);
+      setExiting(
+        action === "accept" ? "right" : action === "deny" ? "left" : "up",
+      );
       setDrag({ x: 0, y: 0, active: false });
 
       try {
-        const result = await swipe({
+        const result = await review({
           toUserId: target._id,
-          action: liked ? "like" : "pass",
+          action,
+          comment: extras?.comment,
+          requestedChange: extras?.requestedChange,
         });
         if (result.matched) {
           setMatchFlash(target.name);
           window.setTimeout(() => setMatchFlash(null), 1800);
+        } else if (action === "request_changes") {
+          setChangesFlash(target.name);
+          window.setTimeout(() => setChangesFlash(null), 1800);
         }
       } catch {
         // keep card out of local deck even if network flakes; query will refresh
@@ -101,18 +150,20 @@ export default function Discover() {
         busyRef.current = false;
       }, FLY_MS);
     },
-    [swipe],
+    [review],
   );
 
-  const doSwipe = (liked: boolean) => {
+  const doReview = (action: ReviewAction) => {
     if (!profile || busyRef.current || exiting) return;
-    void finishSwipe(liked, profile);
+    if (action === "request_changes") {
+      setRequestOpen(true);
+      return;
+    }
+    void finishReview(action, profile);
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (busyRef.current || exiting) return;
-    // Don't steal clicks from buttons inside the card chrome (none yet), but
-    // ignore multi-touch / secondary buttons.
+    if (busyRef.current || exiting || requestOpen) return;
     if (e.button !== 0) return;
     dragRef.current = {
       pointerId: e.pointerId,
@@ -128,7 +179,7 @@ export default function Discover() {
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (dragRef.current.pointerId !== e.pointerId) return;
     const x = e.clientX - dragRef.current.startX;
-    const y = (e.clientY - dragRef.current.startY) * 0.35;
+    const y = (e.clientY - dragRef.current.startY) * 0.55;
     dragRef.current.x = x;
     dragRef.current.y = y;
     setDrag({ x, y, active: true });
@@ -136,31 +187,43 @@ export default function Discover() {
 
   const endDrag = (pointerId: number) => {
     if (dragRef.current.pointerId !== pointerId || !profile) return;
-    const { x } = dragRef.current;
+    const { x, y } = dragRef.current;
     dragRef.current.pointerId = null;
 
+    if (y <= -UP_THRESHOLD && Math.abs(y) > Math.abs(x)) {
+      setRequestOpen(true);
+      setDrag({ x: 0, y: 0, active: false });
+      return;
+    }
     if (Math.abs(x) >= SWIPE_THRESHOLD) {
-      void finishSwipe(x > 0, profile);
+      void finishReview(x > 0 ? "accept" : "deny", profile);
       return;
     }
     setDrag({ x: 0, y: 0, active: false });
   };
 
-  // Keyboard: ← pass, → like
+  // Keyboard: ← deny, → accept, ↑ request changes
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!profile || busyRef.current || exiting) return;
+      if (requestOpen) {
+        if (e.key === "Escape") setRequestOpen(false);
+        return;
+      }
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        void finishSwipe(false, profile);
+        void finishReview("deny", profile);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        void finishSwipe(true, profile);
+        void finishReview("accept", profile);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setRequestOpen(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [profile, exiting, finishSwipe]);
+  }, [profile, exiting, finishReview, requestOpen]);
 
   if (authLoading || (isAuthenticated && me === undefined)) {
     return (
@@ -176,7 +239,7 @@ export default function Discover() {
     return (
       <Shell>
         <Empty
-          title="Sign in to discover twins"
+          title="Sign in to review PRs"
           body="matching runs on your live AI coding fingerprint"
           href="/sign-in"
           cta="Sign in"
@@ -202,7 +265,7 @@ export default function Discover() {
     return (
       <Shell>
         <p className="mt-20 text-center text-xs tracking-wide text-muted">
-          Finding twins…
+          Loading open PRs…
         </p>
       </Shell>
     );
@@ -212,22 +275,29 @@ export default function Discover() {
     return (
       <Shell>
         <Empty
-          title="Deck empty"
-          body="no more candidates in nearby burn bands — check matches or come back later"
+          title="Inbox zero"
+          body="no open PRs in nearby burn bands — check merges or come back later"
           href="/matches"
-          cta="View matches"
+          cta="View merges"
         />
       </Shell>
     );
   }
 
-  const dragProgress = Math.min(Math.abs(drag.x) / SWIPE_THRESHOLD, 1);
-  const intent: "left" | "right" | null =
+  const dragProgress = Math.min(
+    Math.max(Math.abs(drag.x) / SWIPE_THRESHOLD, Math.abs(Math.min(drag.y, 0)) / UP_THRESHOLD),
+    1,
+  );
+  const intent: ExitDir | null =
     exiting ??
-    (drag.active && Math.abs(drag.x) > 24
-      ? drag.x > 0
-        ? "right"
-        : "left"
+    (drag.active
+      ? drag.y < -28 && Math.abs(drag.y) > Math.abs(drag.x)
+        ? "up"
+        : Math.abs(drag.x) > 24
+          ? drag.x > 0
+            ? "right"
+            : "left"
+          : null
       : null);
   const rotate = exiting ? 0 : drag.x * 0.06;
   const cardStyle = exiting
@@ -243,16 +313,27 @@ export default function Discover() {
     <Shell>
       {matchFlash && (
         <div className="fixed inset-x-0 top-8 z-20 mx-auto flex w-fit items-center gap-2 rounded-full bg-wine px-5 py-2 text-sm font-semibold text-ink shadow-[0_0_30px_rgba(124,29,49,0.5)] animate-[float-up_0.35s_ease-out]">
-          <HeartIcon filled className="h-4 w-4" />
-          It&apos;s a match with {matchFlash}
+          <CheckIcon className="h-4 w-4" />
+          Merged with {matchFlash}
+        </div>
+      )}
+      {changesFlash && (
+        <div className="fixed inset-x-0 top-8 z-20 mx-auto flex w-fit items-center gap-2 rounded-full border border-line-bright bg-card px-5 py-2 text-sm font-semibold text-ink animate-[float-up_0.35s_ease-out]">
+          <StarIcon className="h-4 w-4 text-rose" />
+          Changes requested · {changesFlash}
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <h1 className="font-serif text-4xl text-ink">Discover</h1>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-rose">
+            pull request
+          </p>
+          <h1 className="font-serif text-4xl text-ink">Review</h1>
+        </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full border border-line-bright px-3 py-1.5 text-[11px] text-rose">
-            {Math.round(profile.matchScore * 100)}% twin
+          <span className="rounded-full border border-line-bright px-3 py-1.5 font-mono text-[11px] text-rose">
+            open · {Math.round(profile.matchScore * 100)}% fit
           </span>
           <button
             type="button"
@@ -264,7 +345,6 @@ export default function Discover() {
         </div>
       </div>
 
-      {/* Stack: next card peeks underneath while the top one flies */}
       <div className="relative mt-5 flex flex-1">
         {nextProfile && (
           <div
@@ -292,26 +372,33 @@ export default function Discover() {
               ? "swipe-fly-left"
               : exiting === "right"
                 ? "swipe-fly-right"
-                : "float-up"
+                : exiting === "up"
+                  ? "swipe-fly-up"
+                  : "float-up"
           }`}
           style={cardStyle}
         >
-          {/* LIKE / PASS stamps */}
           <div
             className="pointer-events-none absolute inset-0 z-20 flex items-start justify-between px-6 pt-14"
             aria-hidden
           >
             <Stamp
-              label="LIKE"
-              tone="like"
+              label="ACCEPT"
+              tone="accept"
               visible={intent === "right"}
               strength={exiting === "right" ? 1 : dragProgress}
             />
             <Stamp
-              label="PASS"
-              tone="pass"
+              label="DENY"
+              tone="deny"
               visible={intent === "left"}
               strength={exiting === "left" ? 1 : dragProgress}
+            />
+            <Stamp
+              label="REQUEST CHANGES"
+              tone="changes"
+              visible={intent === "up"}
+              strength={exiting === "up" ? 1 : dragProgress}
             />
           </div>
 
@@ -319,33 +406,146 @@ export default function Discover() {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="mt-5 flex items-center justify-center gap-6">
+      <div className="mt-5 flex items-center justify-center gap-5">
         <ActionButton
-          label="Pass"
+          label="Deny"
           pressed={intent === "left"}
-          onClick={() => doSwipe(false)}
+          onClick={() => doReview("deny")}
         >
           <XIcon className="h-5 w-5" />
         </ActionButton>
-        <ActionButton label="Super like" onClick={() => doSwipe(true)}>
+        <ActionButton
+          label="Request changes"
+          pressed={intent === "up" || requestOpen}
+          onClick={() => doReview("request_changes")}
+        >
           <StarIcon className="h-5 w-5" />
         </ActionButton>
         <button
           type="button"
-          aria-label="Like"
-          onClick={() => doSwipe(true)}
+          aria-label="Accept"
+          onClick={() => doReview("accept")}
           className={`flex h-18 w-18 items-center justify-center rounded-full bg-wine text-ink shadow-[0_0_30px_rgba(124,29,49,0.5)] transition hover:bg-wine-hover ${
             intent === "right" ? "scale-110 bg-wine-hover" : ""
           }`}
         >
-          <HeartIcon filled className="h-7 w-7" />
+          <CheckIcon className="h-7 w-7" />
         </button>
       </div>
-      <p className="mt-3 text-center text-[10px] tracking-wide text-faint">
-        drag · ← pass · → like
+      <p className="mt-3 text-center font-mono text-[10px] tracking-wide text-faint">
+        ← deny · ↑ request changes · → accept
       </p>
+
+      {requestOpen && (
+        <RequestChangesModal
+          profile={profile}
+          onClose={() => setRequestOpen(false)}
+          onSubmit={(payload) => void finishReview("request_changes", profile, payload)}
+        />
+      )}
     </Shell>
+  );
+}
+
+function RequestChangesModal({
+  profile,
+  onClose,
+  onSubmit,
+}: {
+  profile: PublicCandidate;
+  onClose: () => void;
+  onSubmit: (payload: {
+    comment: string;
+    requestedChange: { kind: "model"; from: string; to: string };
+  }) => void;
+}) {
+  const options = modelChangeOptions(profile.modelMix);
+  const [selected, setSelected] = useState(0);
+  const [note, setNote] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 px-4 pb-8 pt-16 sm:items-center">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md rounded-3xl border border-line bg-card p-5 shadow-2xl">
+        <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-rose">
+          request changes
+        </p>
+        <h2 className="mt-2 font-serif text-3xl text-ink">
+          Patch {profile.name}&apos;s PR
+        </h2>
+        <p className="mt-2 text-xs leading-relaxed text-muted">
+          Interested — but not merge-ready. Ask them to change something concrete,
+          like their model mix.
+        </p>
+
+        <div className="mt-5 space-y-2">
+          {options.map((opt, i) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setSelected(i)}
+              className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition ${
+                selected === i
+                  ? "border-rose bg-wine/30 text-ink"
+                  : "border-line bg-black/20 text-muted hover:border-line-bright"
+              }`}
+            >
+              <span>{opt.label}</span>
+              {selected === i && <CheckIcon className="h-4 w-4 text-rose" />}
+            </button>
+          ))}
+        </div>
+
+        <label className="mt-4 block">
+          <span className="text-[10px] uppercase tracking-[0.22em] text-faint">
+            review comment
+          </span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder={`e.g. try ${options[selected]?.to ?? "another model"} on your next ship and ping me`}
+            className="mt-2 w-full resize-none rounded-xl border border-line bg-black/30 px-3 py-2.5 text-sm text-ink placeholder:text-faint focus:border-rose focus:outline-none"
+          />
+        </label>
+
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-full border border-line-bright py-3 text-sm text-muted transition hover:border-rose hover:text-rose"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const opt = options[selected];
+              if (!opt) return;
+              const comment =
+                note.trim() ||
+                `Requesting model change: ${opt.from} → ${opt.to}`;
+              onSubmit({
+                comment,
+                requestedChange: {
+                  kind: "model",
+                  from: opt.from,
+                  to: opt.to,
+                },
+              });
+            }}
+            className="flex-1 rounded-full bg-wine py-3 text-sm font-semibold text-ink transition hover:bg-wine-hover"
+          >
+            Submit review
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -356,20 +556,27 @@ function Stamp({
   strength,
 }: {
   label: string;
-  tone: "like" | "pass";
+  tone: "accept" | "deny" | "changes";
   visible: boolean;
   strength: number;
 }) {
   if (!visible) return null;
-  const isLike = tone === "like";
-  const rot = isLike ? 12 : -12;
+  const rot = tone === "accept" ? 12 : tone === "deny" ? -12 : 0;
+  const position =
+    tone === "accept"
+      ? "ml-auto"
+      : tone === "deny"
+        ? "mr-auto"
+        : "mx-auto mt-8";
+  const color =
+    tone === "accept"
+      ? "border-rose text-rose"
+      : tone === "deny"
+        ? "border-faint text-faint"
+        : "border-blush text-blush";
   return (
     <span
-      className={`rounded-md border-2 px-3 py-1 text-sm font-bold tracking-[0.2em] ${
-        isLike
-          ? "ml-auto border-rose text-rose"
-          : "mr-auto border-faint text-faint"
-      }`}
+      className={`rounded-md border-2 px-3 py-1 text-sm font-bold tracking-[0.14em] ${position} ${color}`}
       style={{
         opacity: Math.max(0.35, strength),
         transform: `scale(${0.92 + strength * 0.08}) rotate(${rot}deg)`,
@@ -390,18 +597,17 @@ function CardFace({
 }) {
   const persona = computePersona(profile);
   const chips = fingerprintChips(profile);
+  const topModel = MODEL_LABELS[dominantModel(profile.modelMix)];
 
   return (
     <>
-      <div className="relative z-10 flex gap-1.5 px-4 pt-4">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <span
-            key={i}
-            className={`h-1 flex-1 rounded-full ${
-              i === 0 ? "bg-rose" : "bg-white/15"
-            }`}
-          />
-        ))}
+      <div className="relative z-10 flex items-center justify-between gap-2 px-4 pt-4">
+        <span className="rounded-full border border-white/20 bg-black/40 px-2.5 py-1 font-mono text-[10px] text-blush">
+          pr · fingerprint
+        </span>
+        <span className="rounded-full border border-white/15 bg-black/40 px-2.5 py-1 font-mono text-[10px] text-ink/80">
+          model: {topModel}
+        </span>
       </div>
 
       {profile.avatarUrl ? (
@@ -458,7 +664,7 @@ function CardFace({
             {profile.bio && (
               <div className="rounded-xl border border-white/10 bg-black/50 px-4 py-3">
                 <p className="text-[9px] uppercase tracking-[0.3em] text-rose">
-                  hot take
+                  commit message
                 </p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-ink/90">
                   &ldquo;{profile.bio}&rdquo;

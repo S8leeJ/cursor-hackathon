@@ -448,7 +448,7 @@ export const seedDemo = internalMutation({
         swipesRemoved += 1;
       }
 
-      for (const action of ["like", "pass"] as const) {
+      for (const action of ["accept", "deny", "request_changes"] as const) {
         const toSwipes = await ctx.db
           .query("swipes")
           .withIndex("by_to_action", (q) =>

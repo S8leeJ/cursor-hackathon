@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChatIcon, HeartIcon, MailIcon, UserIcon } from "@/components/icons";
+import { ChatIcon, CheckIcon, MailIcon, UserIcon } from "@/components/icons";
 
 const TABS = [
-  { href: "/discover", label: "Discover", Icon: HeartIcon },
-  { href: "/matches", label: "Matches", Icon: ChatIcon },
+  { href: "/discover", label: "Review", Icon: CheckIcon },
+  { href: "/matches", label: "Merges", Icon: ChatIcon },
   { href: "/messages", label: "Messages", Icon: MailIcon },
   { href: "/profile", label: "Profile", Icon: UserIcon },
 ] as const;
@@ -26,10 +26,7 @@ export function BottomNav() {
                 active ? "text-rose" : "text-faint hover:text-muted"
               }`}
             >
-              <Icon
-                className="h-5 w-5"
-                {...(Icon === HeartIcon ? { filled: active } : {})}
-              />
+              <Icon className="h-5 w-5" />
               {label}
               <span
                 className={`h-0.5 w-6 rounded-full ${active ? "bg-rose" : "bg-transparent"}`}

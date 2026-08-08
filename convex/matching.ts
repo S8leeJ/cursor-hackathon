@@ -11,7 +11,7 @@ import {
   toPublicProfile,
 } from "./lib/validators";
 import { mutation, query } from "./_generated/server";
-import { swipeActionValidator } from "./schema";
+import { requestedChangeValidator, swipeActionValidator } from "./schema";
 
 const CANDIDATE_LIMIT = 40;
 
@@ -25,11 +25,11 @@ export const discover = query({
     }
 
     const myBurn = me.typicalTokenBurn;
-    const swiped = await ctx.db
+    const reviewed = await ctx.db
       .query("swipes")
       .withIndex("by_from", (q) => q.eq("fromUserId", me._id))
       .take(500);
-    const swipedIds = new Set(swiped.map((s) => s.toUserId));
+    const reviewedIds = new Set(reviewed.map((s) => s.toUserId));
 
     const bands = nearbyBurnBands(myBurn);
     const candidates = [];
@@ -45,7 +45,7 @@ export const discover = query({
 
     const scored = [];
     for (const other of candidates) {
-      if (other._id === me._id || swipedIds.has(other._id)) continue;
+      if (other._id === me._id || reviewedIds.has(other._id)) continue;
       if (!hasCompleteFingerprint(other)) continue;
       scored.push({
         ...toPublicProfile(other),
@@ -58,10 +58,16 @@ export const discover = query({
   },
 });
 
+/**
+ * Submit a PR review on a candidate: accept, deny, or request_changes.
+ * Mutual accept ⇒ merged (matched: true).
+ */
 export const swipe = mutation({
   args: {
     toUserId: v.id("users"),
     action: swipeActionValidator,
+    comment: v.optional(v.string()),
+    requestedChange: v.optional(requestedChangeValidator),
   },
   returns: v.object({
     matched: v.boolean(),
@@ -69,13 +75,27 @@ export const swipe = mutation({
   handler: async (ctx, args) => {
     const me = await getCurrentUser(ctx);
     if (args.toUserId === me._id) {
-      throw new Error("Cannot swipe on yourself");
+      throw new Error("Cannot review yourself");
     }
 
     const target = await ctx.db.get(args.toUserId);
     if (!target) {
       throw new Error("User not found");
     }
+
+    if (args.action === "request_changes") {
+      const comment = args.comment?.trim() ?? "";
+      if (!comment && !args.requestedChange) {
+        throw new Error("Request changes needs a comment or a concrete ask");
+      }
+    }
+
+    const review = {
+      action: args.action,
+      comment: args.comment?.trim() || undefined,
+      requestedChange: args.requestedChange,
+      createdAt: Date.now(),
+    };
 
     const existing = await ctx.db
       .query("swipes")
@@ -84,24 +104,20 @@ export const swipe = mutation({
       )
       .unique();
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        action: args.action,
-        createdAt: Date.now(),
-      });
+      await ctx.db.patch(existing._id, review);
     } else {
       await ctx.db.insert("swipes", {
         fromUserId: me._id,
         toUserId: args.toUserId,
-        action: args.action,
-        createdAt: Date.now(),
+        ...review,
       });
     }
 
-    if (args.action !== "like") {
+    if (args.action !== "accept") {
       return { matched: false };
     }
 
-    // Seed profiles auto-reciprocate likes so the demo match flow works.
+    // Seed profiles auto-reciprocate accepts so the demo merge flow works.
     if (target.clerkId.startsWith("seed_")) {
       const reverse = await ctx.db
         .query("swipes")
@@ -113,12 +129,12 @@ export const swipe = mutation({
         await ctx.db.insert("swipes", {
           fromUserId: args.toUserId,
           toUserId: me._id,
-          action: "like",
+          action: "accept",
           createdAt: Date.now(),
         });
-      } else if (reverse.action !== "like") {
+      } else if (reverse.action !== "accept") {
         await ctx.db.patch(reverse._id, {
-          action: "like",
+          action: "accept",
           createdAt: Date.now(),
         });
       }
@@ -132,7 +148,7 @@ export const swipe = mutation({
       )
       .unique();
 
-    return { matched: theirSwipe?.action === "like" };
+    return { matched: theirSwipe?.action === "accept" };
   },
 });
 
@@ -142,23 +158,23 @@ export const listMatches = query({
   handler: async (ctx) => {
     const me = await getCurrentUser(ctx);
 
-    const myLikes = await ctx.db
+    const myReviews = await ctx.db
       .query("swipes")
       .withIndex("by_from", (q) => q.eq("fromUserId", me._id))
       .take(200);
-    const likedIds = myLikes
-      .filter((s) => s.action === "like")
+    const acceptedIds = myReviews
+      .filter((s) => s.action === "accept")
       .map((s) => s.toUserId);
 
     const matches = [];
-    for (const otherId of likedIds) {
+    for (const otherId of acceptedIds) {
       const reverse = await ctx.db
         .query("swipes")
         .withIndex("by_from_to", (q) =>
           q.eq("fromUserId", otherId).eq("toUserId", me._id),
         )
         .unique();
-      if (reverse?.action !== "like") continue;
+      if (reverse?.action !== "accept") continue;
 
       const other = await ctx.db.get(otherId);
       if (!other || !hasCompleteFingerprint(other)) continue;

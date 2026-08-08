@@ -81,6 +81,13 @@ body {
   }
 }
 
+@keyframes swipe-fly-up {
+  to {
+    transform: translate(0, -120%) rotate(-4deg);
+    opacity: 0;
+  }
+}
+
 .swipe-fly-left {
   animation: swipe-fly-left 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   pointer-events: none;
@@ -88,6 +95,11 @@ body {
 
 .swipe-fly-right {
   animation: swipe-fly-right 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+.swipe-fly-up {
+  animation: swipe-fly-up 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   pointer-events: none;
 }
 

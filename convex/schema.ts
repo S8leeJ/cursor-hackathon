@@ -11,8 +11,9 @@
  *     2) modelMix — L1/cosine distance on {opus, gpt, gemini} weights (each 0..1, ~sum to 1)
  *     3) typicalTokenBurn — ordinal distance on intensity bands
  * - Candidate lookup: index `by_hasFingerprint_burn` lists discoverable users in a burn band
- *   (and nearby bands). Exclude self + already-swiped via `swipes` (`by_from_to`).
- * - Likes/passes are stored; a mutual like is a "match" (derived, no matches table yet).
+ *   (and nearby bands). Exclude self + already-reviewed via `swipes` (`by_from_to`).
+ * - Reviews are Pull Request decisions: accept / deny / request_changes.
+ *   Mutual accept ⇒ "merged" match (derived, no matches table yet).
  *
  * Auth: Clerk identity → `clerkId` (JWT `subject`). Get-or-create profiles by that index.
  */
@@ -52,10 +53,19 @@ export const tokenBurnBandValidator = v.union(
   v.literal("extreme"),
 );
 
+/** PR-review outcomes on a candidate profile. */
 export const swipeActionValidator = v.union(
-  v.literal("like"),
-  v.literal("pass"),
+  v.literal("accept"),
+  v.literal("deny"),
+  v.literal("request_changes"),
 );
+
+/** Optional structured ask when reviewing with request_changes. */
+export const requestedChangeValidator = v.object({
+  kind: v.literal("model"),
+  from: v.string(),
+  to: v.string(),
+});
 
 export default defineSchema({
   /**
@@ -89,13 +99,16 @@ export default defineSchema({
     .index("by_hasFingerprint_burn", ["hasFingerprint", "typicalTokenBurn"]),
 
   /**
-   * Like / pass from one user to another. Unique pair enforced in mutation via by_from_to.
-   * Mutual likes ⇒ match (computed at read time).
+   * PR review from one user to another. Unique pair enforced in mutation via by_from_to.
+   * Mutual accepts ⇒ merged match (computed at read time).
    */
   swipes: defineTable({
     fromUserId: v.id("users"),
     toUserId: v.id("users"),
     action: swipeActionValidator,
+    /** Free-text review comment (required for request_changes in the mutation). */
+    comment: v.optional(v.string()),
+    requestedChange: v.optional(requestedChangeValidator),
     createdAt: v.number(),
   })
     .index("by_from", ["fromUserId"])
