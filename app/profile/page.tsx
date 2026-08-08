@@ -120,9 +120,9 @@ export default function Profile() {
             bio={me.bio}
             avatarUrl={me.avatarUrl}
             linkedinUrl={me.linkedinUrl}
-            preferredAgents={me.preferredAgents}
-            modelMix={me.modelMix}
-            typicalTokenBurn={me.typicalTokenBurn}
+            preferredAgents={fingerprint.preferredAgents}
+            modelMix={fingerprint.modelMix}
+            typicalTokenBurn={fingerprint.typicalTokenBurn}
           />
         </>
       )}

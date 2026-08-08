@@ -284,7 +284,7 @@ export function EmptyState({
   variant?: Variant;
 }) {
   return (
-    <div className="rise mt-14 flex flex-col items-center px-6 text-center">
+    <div className="rise my-auto flex flex-col items-center px-6 py-14 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-sm border border-rule-strong bg-panel text-ink-3">
         {glyph}
       </span>
@@ -331,7 +331,7 @@ export function Label({
 /** Terminal-style progress: a command that hasn't returned yet. */
 export function Loading({ what = "loading" }: { what?: string }) {
   return (
-    <p className="mt-16 flex items-center justify-center gap-2 text-[11px] text-ink-3">
+    <p className="my-auto flex items-center justify-center gap-2 py-16 text-[11px] text-ink-3">
       <span className="text-cmt">$</span>
       {what}
       <span className="flex gap-1">
