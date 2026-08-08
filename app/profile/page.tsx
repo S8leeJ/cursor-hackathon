@@ -1,5 +1,6 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { useConvexAuth, useQuery } from "convex/react";
 import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
@@ -16,13 +17,25 @@ import {
 } from "@/lib/swender";
 
 export default function Profile() {
+  const { signOut } = useClerk();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const me = useQuery(api.users.current, isAuthenticated ? {} : "skip");
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
       <main className="flex-1 px-5 pb-4 pt-6">
-        <h1 className="font-serif text-4xl text-ink">Profile</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="font-serif text-4xl text-ink">Profile</h1>
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => void signOut({ redirectUrl: "/" })}
+              className="rounded-full border border-line-bright px-3.5 py-1.5 text-[11px] tracking-wide text-muted transition hover:border-rose hover:text-rose"
+            >
+              Sign out
+            </button>
+          )}
+        </div>
 
         {authLoading || (isAuthenticated && me === undefined) ? (
           <p className="mt-16 text-center text-xs tracking-wide text-muted">
