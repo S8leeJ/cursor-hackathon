@@ -633,3 +633,133 @@ Paste-forward backlog of **45** named features. Docs-only ideation; ethical boun
 ---
 
 *Backlog append for draft PR #2. Docs-only; do not merge to main.*
+
+---
+
+## Feature forge v4 — even more diabolical
+
+Another append-only wave. **25+ NEW** named features not already listed above. Ethical bounds unchanged: no stalking, doxxing, non-consensual scraping, shadow reputation, or harassment mechanics. Playful SWE-dark humor only.
+
+### Observability / SRE dating
+
+1. **SLI of Softness** — Agree 2–3 Service Level Indicators for the bond (reply latency bands, plan-keeping %, Busy accuracy). Private burn charts; page *yourself*, never publicly shame the other person.
+2. **Error Budget for Ghosting** — Each person gets a monthly silence budget; exceeding it opens a blameless `incident` Issue instead of passive-aggressive unread receipts.
+3. **On-Call Handshake** — After merge, declare who is “primary on-call” for planning this week (rotates). Clever: ownership of logistics without nagging spirals.
+4. **Trace IDs for Plans** — Every Date Card gets a short `trace-id`; chat replies can reference it so context doesn’t fork into three half-plans.
+5. **Saturation Alerts** — If chat WIP + open PRs + midterm Busy collide, the board shows `saturated` and refuses new Hotfix intake until you shed load.
+
+### Security / threat-modeling consent
+
+6. **STRIDE-the-Date** — Lightweight threat model checklist before first meet (Spoofing profiles, Tampering plans, Repudiation of consent, Info disclosure, DoS via spam reviews, Elevation via pressure). Both tick boxes; comedy with teeth.
+7. **Consent Capability Tokens** — Explicit, revocable tokens for scopes: `share-photo`, `meet-off-campus`, `add-to-group-chat`. No scope → CTA disabled. Diabolical: OAuth for affection.
+8. **Least-Privilege Bio** — Default profile shows minimum fields; each extra field is an opt-in grant with TTL. Clever: privacy as IAM, not a settings graveyard.
+9. **Incident Response Runbook (Safety)** — One-tap runbook: share plan, check-in, block, report, export evidence pack. Same student safety rails, SRE-shaped.
+10. **Signed Consent Receipts** — After both Accept a Date Card, store a private receipt of what was agreed (time/place/scope). Not public; anti-gaslight, not surveillance.
+
+### Package managers / dependency love languages
+
+11. **Love Language = Package Manager** — Declare `npm` (explicit lockfile), `cargo` (strict types/traits), `pip` (flexible but chaotic), `bazel` (hermetic routines). Matcher soft-boosts compatible install philosophies — enumerable, not embedding cosplay.
+12. **Peer Dependency Negotiator** — When two lockfiles conflict (sleep vs late hack nights), UI opens a 3-way merge UI for *one* dependency at a time. No silent resentment installs.
+13. **Optional Peer: Pets & Plants** — Optional deps you bring into shared space, declared up front. Clever: scope the household early without trap features.
+14. **Yanked Version Notice** — If you deprecate an intent or boundary, dependents (active chats) get a yank notice + migration guide, not a sudden 404.
+
+### Compiler / type-system flirting
+
+15. **Strict Mode Courtship** — Opt into `strict: true`: intent, schedule, and pins must typecheck before you can open PRs. Diabolical: no `any` in your dating config.
+16. **Protocol Witnesses** — Traits you implement (`AsyncCommunicator`, `ShowsUpOnTime`, `GivesDesignDocs`). Others can Request Changes if a witness is missing — still visible, still kind.
+17. **Null Safety Nudge** — Empty “what I’m looking for” blocks Merge Train eligibility. Clever: `T?` without a default doesn’t ship.
+18. **Exhaustive Match Intents** — Switching intent requires updating all open PRs (re-review or close). Compiler energy: no forgotten matches.
+
+### Maintainer burnout empathy / OSS texture
+
+19. **Maintainer Mode** — Status that throttles inbound PRs to 1/week and auto-replies with capacity RFC. Empathy for people who already review code all day.
+20. **Triage Party (Two-Person)** — Weekly 25m to clear shared Issues (`good first meet`, `blocked on capacity`) together. Diabolical: relationship scrum without standup theater.
+21. **Goodbye COMMIT Message** — Closing a chat requires a one-line commit subject (`chore: sunset thread — capacity`). Visible to both; dignified exit grammar.
+22. **Support Window Banner** — Declare “I reply evenings only” as a maintainer support window on the profile diff. Soft expectation setting, not read-receipt police.
+
+### Hackathon war stories / research dates
+
+23. **War Story Gists** — Opt-in 300-char gists: TreeHacks sleep-floor saga, broken demo, glorious kludge. Taste signal via narrative, not trophy case.
+24. **Journal Club Date** — Date Card template: pick one paper/RFC/blog, 45m discuss + 15m walk. Research kids get a first-class meet shape.
+25. **Poster Session Mixer** — Soft campus-boosted, WIP-capped group night where each person brings one pin/README as a “poster.” No infinite mingle mode.
+26. **Reproducibility Bond** — Pair tries to re-run each other’s pinned README in a sandboxed hour. Green if both get hello-world; badge is private to the pair.
+
+### Music + code (livecoding)
+
+27. **Algorave RSVP** — Opt-in interest tag + Date Card: attend/watch an algorave or livecoding set, or jam for 30m in Hydra/Tidal-ish tools. Arts×systems bridge.
+28. **BPM Boundaries** — Shared playlist rate-limit: max one “listen to this” link/day unless both raise the cap. Diabolical: anti-spam as mixer etiquette.
+29. **Duo Livecoding Slot** — Fork of pair-slot energy but audio/visual: 45m, both push a clip or gist. Distinct from kata; performance-shaped.
+
+### Museum / comedy / multiplayer debugging
+
+30. **Hall of Denied Diffs (Consensual Comedy)** — Opt-in museum where *you* can publish anonymized snippets of *your own* past Deny comments you’re proud of (wit without targeting). Never publishes someone else’s words without their release.
+31. **Dungeon = Pair Debugging** — Co-op “quest”: a flaky test or toy bug in a shared repo; roles `driver`/`navigator`; clear the boss to unlock a Canary coffee. Multiplayer without gamified creepy XP.
+32. **Boss Fight: Calendar Hydra** — Mini-ritual that collapses three proposed times into one via ranked choice. Clever: kills the scheduling hydra with a mechanic, not vibes.
+33. **Spectator Mode (Friends)** — CODEOWNERS wingpeople can watch *your* triage board metrics (WIP, overdue train) with your consent — not read your DMs. Accountability without outing.
+
+### Extra compiler/SRE spice (keep going)
+
+34. **Hysteresis on Busy** — Exiting Busy has a cool-down before Walk-ins flood you (prevents flapping). SRE anti-flap for humans.
+35. **Dead Letter Queue** — Expired Walk-ins and ignored Hotfixes land in a private DLQ you can replay once/week — still WIP-gated. No infinite revive swipe.
+36. **Schema Migration Dates** — Big life changes (graduating, new lab, leaving The Farm) open a versioned migration PR to your profile with reviewer notes for active merges.
+37. **Typed Throws for Conflict** — Conflict Issues must use typed reasons (`CapacityError`, `ValuesMismatchError`, `ScheduleConflictError`) — exhaustiveness over vague “we need to talk” voids.
+
+---
+
+## Cut list guidance
+
+Ideation stays; this ranks what to **prototype first** vs park. Does **not** delete any forge/backlog item.
+
+### Top 15 to prototype (near-term)
+
+Ship enough to feel like SWEnder, not Tinder-with-monospace.
+
+| Priority | Feature / system | Why prototype now |
+|---|---|---|
+| 1 | Courtship as PR + visible Accept / Request Changes / Deny | Locked core loop |
+| 2 | Comment rubrics + CI reject rubber-stamps | Quality without moderation-only hope |
+| 3 | Global WIP (max 3 open PRs) on Triage Board | Prevents infinite swipe reincarnation |
+| 4 | Weekly Merge Train (Lane A) | Scarcity + cadence students can survive |
+| 5 | GitHub link required + opt-in pins + light public basics on PR diff | Identity + taste without dossier creep |
+| 6 | Office-Hours Walk-ins (Lane D) + Good First Issue openers | Availability-first, LaIR-shaped honesty |
+| 7 | Review Tokens + LGTM Tax | Makes Accept expensive enough to be meaningful |
+| 8 | Deny Requires a Patch Suggestion / first-class exit | Deny is grammar, ghosting is disabled |
+| 9 | Date Card + Canary Deploy / Canary Date templates | Short reversible first meet |
+| 10 | Busy / Merge Freeze / TreeHacks Freeze | Silence with dignity |
+| 11 | Required Checks / Boundaries CI before deep chat | Consent + bounds before intensity |
+| 12 | Museum of Closed PRs + Cold Storage Archive (private) | Learning without public shame |
+| 13 | No Embeddings Cosplay + enumerable overlaps only | Anti–vibe-coded matching ethics |
+| 14 | Safety runbook (share plan, check-in, block, report) | Non-negotiable with visible Denies |
+| 15 | Campus soft boost + `.edu` / intent gates from student MVP | Keep student constraints wired in |
+
+### Prototype soon after (still sharp, slightly heavier)
+
+- Hotfix (Lane B) with star intersection / pin forage  
+- Chaos / Blame-the-Algorithm (Lane C) opt-in  
+- RFC Before Exclusive + Issue Templates for Conflict  
+- Rollback / SEV Dating Postmortem  
+- CODEOWNERS Wingpeople (suggest-only)  
+- Strict Mode Courtship + Love Language = Package Manager (as *labels*, not ML)  
+- Journal Club Date + War Story Gists  
+- Consent Capability Tokens  
+
+### Later / park (delightful but not blocking the loop)
+
+- Shader Courtship, Algorave RSVP, Duo Livecoding, Generative Compat Seed  
+- Dungeon = Pair Debugging, Hall of Denied Diffs (consensual comedy)  
+- Monorepo Mode, Worktree Dates, Blue/Green Profiles, Feature Flag Affection  
+- `~/.swenderrc`, `man swender-date`, ASCII/Terminal Gallery skins  
+- Poster Session Mixer, Reproducibility Bond, Schema Migration Dates  
+- Maintainer Mode polish, Support Window Banner, Spectator Mode  
+
+### Explicitly do **not** prototype (even if spicy)
+
+- Co-contributor / people-you-may-know graphs  
+- Mystery % compatibility / embedding cosplay  
+- Public reputation, leaderboards, or shadow elo  
+- GPS trails, silent roster joins, non-consensual scraping  
+- Any mechanic that hides Deny/Request Changes/Accept comments (visibility is locked)
+
+---
+
+*v4 forge + cut list append for draft PR #2. Docs-only; do not merge to main.*
