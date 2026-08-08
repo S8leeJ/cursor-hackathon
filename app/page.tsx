@@ -24,7 +24,7 @@ export default function Home() {
 
       <Unauthenticated>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in to sync your identity with Convex.
+          Continue with GitHub to sync your identity with Convex.
         </p>
       </Unauthenticated>
 
