@@ -763,3 +763,59 @@ Ship enough to feel like SWEnder, not Tinder-with-monospace.
 ---
 
 *v4 forge + cut list append for draft PR #2. Docs-only; do not merge to main.*
+
+---
+
+## Feature forge v5 — terminal demons
+
+Append-only wave of **20+ NEW** named features (checked against prior numbered names). Terminal/git intimacy with SWE-dark humor — still ethical: no stalking, doxxing, non-consensual scraping, shadow scores, or hidden review comments.
+
+### Pager / tmux intimacy
+
+1. **tmux Pair Session** — After merge, opt-in shared “session”: named windows for `plans`, `feelings`, `logistics`. Detaching is allowed; killing the session requires a visible commit message.
+2. **split-pane Confessional** — Chat UI can split: left = logistics, right = feelings. Sending in the wrong pane nudges `wrong window`. Clever: context switching as care.
+3. **less +F Listening Mode** — When someone marks Busy, your chat becomes follow-mode: you can queue messages that deliver when they leave Busy (no push spam). Diabolical pager patience.
+4. **Scrollback Consent** — Long threads paginate; jumping to ancient scrollback requires a `/jump` with reason. Anti-dredge without deleting history.
+5. **Status-Bar Affection** — Tiny shared status line (`WIP=2`, `next: Thu coffee`, `Busy until Fri`). Not a public presence graph — pair-only HUD.
+
+### Git hooks as consent hooks
+
+6. **pre-commit Consent Hook** — Before sending a Date Card, local checklist hook: place public? exit plan? shared transport? Block send until green.
+7. **pre-push Boundary Hook** — Raising chat intensity (late-night call ask, off-campus) runs a consent capability check; missing scope → hook fails with actionable grant request.
+8. **commit-msg Kindness Lint** — Review comments failing basic kindness/blocklist fail the hook before visibility — still doesn’t hide successful Denies.
+9. **post-merge Aftercare Hook** — On mutual Accept, prompts a 3-bullet aftercare template (communication SLO, Busy norms, kill switch). Optional but sticky once enabled.
+
+### Monorepo jealousy (named, contained)
+
+10. **Monorepo Jealousy Diff** — If you feel sidelined by their other packages (lab, team, ex-thread archive), open a typed Issue `JealousyDiff` with hunks — no reading their other DMs; structured confession.
+11. **CODEOWNERS Envy Map** — Opt-in map of which life packages have owners (you / them / shared). Jealousy becomes a ownership conversation, not surveillance.
+12. **Workspace Boundary** — Declare packages that are `private` (not discussable) vs `reviewable`. Crossing into private without invite is a lint error in prompts.
+
+### SPDX love licenses / SBOM emotions
+
+13. **SPDX Love License** — Choose a relationship license string (`SWENDER-EXCLUSIVE-1.0`, `SWENDER-NONEXCLUSIVE-CASUAL-1.0`, `SWENDER-FRIENDS-FIRST-1.0`) with human-readable rights/obligations. DTR with SPDX energy.
+14. **License Compatibility Matrix** — Soft warning when license strings conflict (exclusive vs casual). Enumerable table — no mystery %.
+15. **SBOM of Emotional Dependencies** — List what you currently depend on (therapist, lab deadline, family weekly call, meds routine) as an Emotional Bill of Materials. Partners see load, not gossip graph.
+16. **Vulnerability Disclosure (Feelings)** — Private `security@`-style channel between the pair for “I felt unsafe / disrespected” reports with SLA — distinct from public moderation.
+
+### Fuzzing / property-based testing
+
+17. **Boundary Fuzzer** — Opt-in weekly prompts that gently probe edge cases you both listed as fuzzy (`texts after 11pm?`, `surprises ok?`). Findings file as Issues, not traps.
+18. **Property-Based Relationship Testing** — Declare invariants (`shows_up ∨ cancels_with_2h`, `no_silent_treatment > 48h without Busy`). Counterexamples open blameless tickets.
+19. **Generator of Good First Dates** — Property generator suggests Date Cards from pinned constraints (distance, budget, sensory load). Reject/Accept as test oracles.
+20. **Shrinking a Fight** — Conflict helper that shrinks a huge argument to the minimal failing example (one sentence each). Diabolical: `shrink` until the real bug shows.
+
+### Rebase vs merge / bisect / cherry-pick / stash / submodules
+
+21. **Rebase vs Merge Philosophy Date** — Date Card template: 45m argue/celebrate whether you rewrite history or preserve it — then apply the metaphor to conflict style. No wrong answer; visible takeaways.
+22. **Bisecting a Breakup** — When sunsetting, optional guided bisect over the thread’s tagged milestones to find the first bad commit *together* (blameless). Distinct from Bisect Night (taste history).
+23. **Cherry-Pick Compliments** — UI to cherry-pick a specific message/commit from the week and pin it to a `COMPLIMENTS.md`. Low-cost affection with provenance.
+24. **stash pop Anxiety** — If you `stash` feelings (private notes) longer than N days, gentle prompt before `pop` (share or discard). Names the dread of sudden emotional dumps.
+25. **Submodule Attachment Style** — Attachment framed as submodule strategy: `pinned commit` (predictable), `tracking branch` (follows main), `init=false` (needs explicit invite). Comedy + clarity; not armchair diagnosis as score.
+26. **git submodule update --remote Ritual** — Quarterly check-in PR: update expectations to HEAD with changelog. Missed updates don’t auto-punish; they open a sync Issue.
+27. **Detached HEAD Evening** — Opt-in “no future talk” hangout mode: present-only, no DTR. Clever: detached HEAD as consensual lightness.
+28. **Abort Merge Safe Word** — Either person can `git merge --abort` a fight mid-thread: pause timers, no scorekeeping, mandatory water/break checklist before retry.
+
+---
+
+*v5 terminal demons append for draft PR #2. Docs-only; do not merge to main.*
