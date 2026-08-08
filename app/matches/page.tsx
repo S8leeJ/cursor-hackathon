@@ -64,8 +64,17 @@ export default function Matches() {
                     className={`float-up overflow-hidden rounded-2xl border border-line bg-gradient-to-b ${gradientForId(p._id)}`}
                   >
                     <div className="flex h-36 items-center justify-center">
-                      <span className="flex h-16 w-16 items-center justify-center rounded-full border border-line-bright bg-black/30 font-serif text-3xl text-blush">
-                        {p.name.charAt(0).toUpperCase()}
+                      <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-line-bright bg-black/30 font-serif text-3xl text-blush">
+                        {p.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.avatarUrl}
+                            alt={p.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          p.name.charAt(0).toUpperCase()
+                        )}
                       </span>
                     </div>
                     <div className="bg-black/50 px-3 py-3">

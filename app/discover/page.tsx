@@ -147,8 +147,17 @@ export default function Discover() {
         </div>
 
         <div className="flex flex-1 items-center justify-center">
-          <div className="flex h-32 w-32 items-center justify-center rounded-full border border-line-bright bg-black/30 font-serif text-6xl text-blush shadow-[0_0_60px_rgba(201,85,107,0.2)]">
-            {profile.name.charAt(0).toUpperCase()}
+          <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border border-line-bright bg-black/30 font-serif text-6xl text-blush shadow-[0_0_60px_rgba(201,85,107,0.2)]">
+            {profile.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatarUrl}
+                alt={profile.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              profile.name.charAt(0).toUpperCase()
+            )}
           </div>
         </div>
 
