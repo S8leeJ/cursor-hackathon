@@ -94,6 +94,7 @@ type PublicCandidate = {
   school?: string;
   bio?: string;
   avatarUrl?: string;
+  linkedinUrl?: string;
   preferredAgents: string[];
   modelMix: { opus: number; gpt: number; gemini: number };
   typicalTokenBurn: "low" | "medium" | "high" | "extreme";
@@ -645,6 +646,17 @@ function CardFace({
           <p className="mt-1.5 truncate text-[10.5px] text-ink-4">
             #{pr} opened {stableAgo(profile._id)} ago · 1 commit
           </p>
+          {profile.linkedinUrl && !quiet && (
+            <a
+              href={profile.linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="mt-1 inline-block text-[11px] text-kw underline-offset-2 hover:underline"
+            >
+              LinkedIn →
+            </a>
+          )}
         </div>
       </div>
 

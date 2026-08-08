@@ -5,6 +5,7 @@ import {
   assertFingerprintComplete,
   normalizeModelMix,
 } from "./lib/fingerprint";
+import { normalizeLinkedInUrl } from "./lib/linkedin";
 import { userDocValidator } from "./lib/validators";
 import { mutation, query } from "./_generated/server";
 import {
@@ -62,6 +63,111 @@ export const me = query({
   returns: userDocValidator,
   handler: async (ctx) => {
     return await getCurrentUser(ctx);
+  },
+});
+
+/** Save or clear the current user's LinkedIn profile URL. */
+export const setLinkedInUrl = mutation({
+  args: {
+    linkedinUrl: v.union(v.string(), v.null()),
+  },
+  returns: userDocValidator,
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (args.linkedinUrl === null || args.linkedinUrl.trim() === "") {
+      await ctx.db.replace(user._id, {
+        clerkId: user.clerkId,
+        name: user.name,
+        email: user.email,
+        school: user.school,
+        bio: user.bio,
+        avatarUrl: user.avatarUrl,
+        preferredAgents: user.preferredAgents,
+        modelMix: user.modelMix,
+        typicalTokenBurn: user.typicalTokenBurn,
+        hasFingerprint: user.hasFingerprint,
+        createdAt: user.createdAt,
+        updatedAt: Date.now(),
+      });
+    } else {
+      const linkedinUrl = normalizeLinkedInUrl(args.linkedinUrl);
+      await ctx.db.patch(user._id, {
+        linkedinUrl,
+        updatedAt: Date.now(),
+      });
+    }
+
+    const updated = await ctx.db.get(user._id);
+    if (!updated) {
+      throw new Error("User not found after update");
+    }
+    return updated;
+  },
+});
+
+/**
+ * Apply selected fields from a LinkedIn import preview onto the current profile.
+ * Only patches fields the client opts into — never overwrites without consent.
+ */
+export const applyLinkedInImport = mutation({
+  args: {
+    name: v.optional(v.string()),
+    school: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    linkedinUrl: v.optional(v.string()),
+  },
+  returns: userDocValidator,
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const patch: {
+      name?: string;
+      school?: string;
+      bio?: string;
+      avatarUrl?: string;
+      linkedinUrl?: string;
+      updatedAt: number;
+    } = { updatedAt: Date.now() };
+
+    if (args.name !== undefined) {
+      const name = args.name.trim();
+      if (name.length < 1) {
+        throw new Error("Name cannot be empty");
+      }
+      patch.name = name;
+    }
+    if (args.school !== undefined) {
+      const school = args.school.trim();
+      if (school) patch.school = school;
+    }
+    if (args.bio !== undefined) {
+      const bio = args.bio.trim();
+      if (bio) patch.bio = bio.slice(0, 280);
+    }
+    if (args.avatarUrl !== undefined) {
+      const avatarUrl = args.avatarUrl.trim();
+      if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
+        patch.avatarUrl = avatarUrl;
+      }
+    }
+    if (args.linkedinUrl !== undefined) {
+      patch.linkedinUrl = normalizeLinkedInUrl(args.linkedinUrl);
+    }
+
+    await ctx.db.patch(user._id, patch);
+
+    if (user.hasFingerprint) {
+      await ctx.scheduler.runAfter(0, internal.peopleIndex.indexPerson, {
+        userId: user._id,
+      });
+    }
+
+    const updated = await ctx.db.get(user._id);
+    if (!updated) {
+      throw new Error("User not found after update");
+    }
+    return updated;
   },
 });
 
