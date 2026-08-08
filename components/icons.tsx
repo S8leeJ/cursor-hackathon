@@ -135,6 +135,19 @@ export function MailIcon(props: IconProps) {
   );
 }
 
+export function BotIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <rect x="5" y="8" width="14" height="11" rx="3" />
+      <path d="M12 8V5" />
+      <circle cx="12" cy="4" r="1" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="13" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="13" r="1.2" fill="currentColor" stroke="none" />
+      <path d="M9 16.5h6M5 12H3.5M21 12h-1.5" />
+    </Stroke>
+  );
+}
+
 export function UserIcon(props: IconProps) {
   return (
     <Stroke {...props}>
