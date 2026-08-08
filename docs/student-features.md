@@ -157,6 +157,8 @@ Build after MVP retention is proven. Not blockers.
 | Core mechanic | Matching decisions are **Pull Request reviews**, not swipes |
 | Review outcomes | Exactly three: **Accept** / **Request Changes** / **Deny** |
 | Review comments | **Mandatory** on every decision (Accept, Request Changes, and Deny) — engagement + signal |
+| Review comment visibility | **GitHub-style transparency:** Deny, Request Changes, **and** Accept review comments are **VISIBLE to the PR author** by default. No silent/hidden decisions. |
+| Moderation posture | Visibility stays the default; ship **moderation + rate limits** so transparent reviews do not become harassment (see §E). |
 | GitHub identity (MVP hard constraint) | Profiles **MUST** link GitHub via **OAuth / verified GitHub link**. No GitHub → cannot complete onboarding or enter the match pool. Non-negotiable. |
 | Public GitHub signal | **Public signal matters** and is first-class in profile + matching: **repos**, **contribution graph**, **READMEs**, and **issues/PRs as taste signal**. Design the profile “diff” and match rationale around that signal (still public-only; no private-repo access). |
 | Co-contributor graph | Still **out** unless explicitly reopened: no “people you may know from repos,” no collaborator stalking graphs. Public artifacts ≠ social graph enrichment. |
@@ -186,6 +188,7 @@ Ship GitHub-required identity + public-signal profiles + the three-outcome PR re
 **Hard rules (MVP):**
 
 - Empty comment → action disabled. No silent Accept / Request Changes / Deny.
+- **Visibility:** The review comment body is shown to the **PR author** for Accept, Request Changes, and Deny (GitHub-style). Default is visible — not opt-in, not redacted-by-default.
 - Editable starter templates allowed; free-text always allowed. Templates are prompts, not the only path.
 - UI copy: **Merged** on mutual Accept — not “It’s a match ♥.”
 - Status chips: `open` → `approved` / `changes requested` / `closed` → `merged` when both Accept.
@@ -220,6 +223,17 @@ Ship GitHub-required identity + public-signal profiles + the three-outcome PR re
 - Mutual Accept → chat under **max 3 open chats**; Date Card / first-meet templates / Busy / safety / hide-from-classmates / privacy defaults unchanged from student MVP.
 - Coding fingerprint (agents / model mix / token burn) remains on the PR diff as structured fields — not a “% twin” badge — and sits **beside** GitHub public signal, not instead of it.
 
+#### E. Visible reviews + anti-harassment (MVP requirement)
+
+Transparent Deny/Request Changes/Accept comments are the product. They must not become a harassment channel. Ship guardrails **with** the review loop — not as a post-MVP apology.
+
+| | |
+|---|---|
+| **Problem** | Visible reject text can be weaponized (slurs, appearance attacks, pile-ons) if there are no brakes. |
+| **Default** | Comments remain **visible to the PR author**. Do not “fix” transparency by hiding Deny bodies. |
+| **Mechanism (MVP floor)** | (1) **Rate limits** on reviews sent / Denies per day (and tighter caps for brand-new accounts). (2) **Block + report** on any review thread; block removes them from future PRs. (3) **Policy + templates** steer toward schedule/intent/taste-of-work reasons — not appearance or identity attacks. (4) **Moderation queue** for reports; repeat offenders lose review privileges or account. (5) Optional light **blocklist / toxicity assist** if cheap to ship — exact stack is an Open Question; the *requirement* to design against harassment is locked. |
+| **SWE why** | GitHub shows review comments; GitHub also bans abuse. Transparency without enforcement is negligence. |
+
 ### Post-MVP (v2 only — after PR loop retains)
 
 | Idea | Notes |
@@ -236,31 +250,30 @@ Ship GitHub-required identity + public-signal profiles + the three-outcome PR re
 |---|---|
 | GitHub-only Clerk auth | Keep; document as **hard MVP requirement** for profile + match eligibility |
 | Profile = name/school/bio + AI fingerprint | Add public GitHub signal sections (repos, contribution graph, README/issue-PR taste) on profile and on the PR diff |
-| `/discover` swipe + `matching.swipe` like/pass | Replace decision UX with Accept / Request Changes / Deny + required comment; **discovery/inbox shape TBD** (Open Question) |
-| Mutual like = match | Mutual **Accept** + comments = **Merged** |
+| `/discover` swipe + `matching.swipe` like/pass | Replace decision UX with Accept / Request Changes / Deny + required **visible** comment; **discovery/inbox shape TBD** (Open Question) |
+| Mutual like = match | Mutual **Accept** + comments = **Merged**; review bodies visible to author |
 | Heart / Pass / Super like chrome | Review actions + status chips; kill swipe romance as primary UX |
+| No abuse controls on swipe | Add review **rate limits**, report/block on threads, moderation queue |
 
 ### Open questions (remaining product decisions)
 
-*Draft PR awaits answers. Locked items above are not listed again.*
+*Draft PR awaits answers. Locked items above are not listed again (including comment visibility = visible to author).*
 
 1. **Discovery (blocking):** What is the **hybrid discovery** model? Weekly Drop only, rolling PR inbox, user-browsable public-signal search, or a hybrid? *(Awaiting user’s explanation — leave unspecified in MVP engineering until answered.)*
 2. **Brand:** Ship as **SWEnder** everywhere, or keep **Token Twin** as fingerprint/sub-brand?
 3. **Queue / cadence policy:** If hybrid, how do Weekly Drop and any browse/search lanes share WIP and cooldowns?
 4. **Request Changes semantics:** Who must act next — author updates profile/availability/pins, reviewer re-reviews, or either? Max rounds before auto-close? Does Request Changes consume a weekly (or hybrid) slot?
-5. **Request Changes visibility:** Is the comment always visible to the other person (true review thread), or only after they re-open / respond?
-6. **Deny comment visibility:** Full comment, redacted reason category, or closed with no body shown?
-7. **Accept comment visibility:** On merge immediately, or gated until Date Card?
-8. **Min comment length / quality:** Character minimum only, or soft checks against empty template submits?
-9. **Date Card vs. chat:** Full chat on merge, or Date Card required to unlock long-form messaging?
-10. **Launch campus:** Stanford, UT Austin (current seeds), or multi-campus day one? (Campus-specific copy stays behind packs.)
-11. **Signal weights:** Relative weight of GitHub public signal vs intent + schedule + interests vs AI coding fingerprint?
-12. **Which GitHub artifacts by default:** Auto-pick top repos / recent PRs vs require user curation of pins before entering the pool?
-13. **Contribution graph presentation:** Raw GitHub-style graph, abstracted activity bands, or both? Avoid shame UX for sparse graphs (research-heavy / new frosh).
-14. **Moderation of review comments:** Blocklist, report-only, or assist for harassment especially on Deny / Request Changes?
-15. **Route rename:** Keep `/discover` or move to `/pulls` / `/inbox`?
-16. **Refresh / source of truth:** Live GitHub fetch on view vs snapshot on onboarding/refresh — staleness policy when README/repos change?
-17. **Super-priority PR:** Any “request review ASAP” analogue, or explicitly none?
+5. **Min comment length / quality:** Character minimum only, or soft checks against empty template submits?
+6. **Date Card vs. chat:** Full chat on merge, or Date Card required to unlock long-form messaging?
+7. **Launch campus:** Stanford, UT Austin (current seeds), or multi-campus day one? (Campus-specific copy stays behind packs.)
+8. **Signal weights:** Relative weight of GitHub public signal vs intent + schedule + interests vs AI coding fingerprint?
+9. **Which GitHub artifacts by default:** Auto-pick top repos / recent PRs vs require user curation of pins before entering the pool?
+10. **Contribution graph presentation:** Raw GitHub-style graph, abstracted activity bands, or both? Avoid shame UX for sparse graphs (research-heavy / new frosh).
+11. **Moderation stack details:** Exact rate-limit numbers; blocklist-only vs report-only vs LLM/toxicity assist; SLA for human review of reports? *(Requirement to ship anti-harassment controls is locked; implementation knobs are open.)*
+12. **Author reply on Deny:** Can the PR author reply once to a visible Deny comment, or is Deny terminal (comment visible, thread closed)?
+13. **Route rename:** Keep `/discover` or move to `/pulls` / `/inbox`?
+14. **Refresh / source of truth:** Live GitHub fetch on view vs snapshot on onboarding/refresh — staleness policy when README/repos change?
+15. **Super-priority PR:** Any “request review ASAP” analogue, or explicitly none?
 
 ---
 
