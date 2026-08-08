@@ -12,7 +12,7 @@ export type LinkedInSuggestions = {
   bio?: string;
   headline?: string;
   avatarUrl?: string;
-  source: "proxycurl" | "open_graph" | "none";
+  source: "open_graph" | "paste" | "none";
   note?: string;
 };
 
@@ -131,7 +131,7 @@ export function suggestionsFromOpenGraph(html: string): LinkedInSuggestions {
   if (!parsed.name && !bio && !image) {
     return {
       source: "none",
-      note: "LinkedIn blocked the public preview. Your link is saved — fill name/bio manually or set PROXYCURL_API_KEY for richer import.",
+      note: "LinkedIn blocked the public preview. Your link is saved — paste your headline or About below to fill fields.",
     };
   }
 
@@ -145,40 +145,56 @@ export function suggestionsFromOpenGraph(html: string): LinkedInSuggestions {
   };
 }
 
-type ProxycurlPerson = {
-  full_name?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  headline?: string | null;
-  summary?: string | null;
-  profile_pic_url?: string | null;
-  education?: Array<{
-    school?: string | null;
-    degree_name?: string | null;
-  }> | null;
-};
+/**
+ * Turn pasted LinkedIn profile text (headline / About / name line) into suggestions.
+ * First non-empty line → name if short; otherwise headline/bio.
+ */
+export function suggestionsFromPaste(raw: string): LinkedInSuggestions {
+  const text = raw.replace(/\r\n/g, "\n").trim();
+  if (!text) {
+    throw new Error("Paste your LinkedIn headline or About text first");
+  }
 
-export function suggestionsFromProxycurl(
-  person: ProxycurlPerson,
-): LinkedInSuggestions {
-  const name =
-    person.full_name?.trim() ||
-    [person.first_name, person.last_name].filter(Boolean).join(" ").trim() ||
-    undefined;
-  const school = person.education?.[0]?.school?.trim() || undefined;
-  const headline = person.headline?.trim() || undefined;
-  const summary = person.summary?.trim() || undefined;
-  const bio = (summary || headline)?.slice(0, 280) || undefined;
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const first = lines[0] ?? "";
+  const rest = lines.slice(1).join("\n").trim();
+
+  // "Name — Headline" or "Name | Headline" on one line
+  const split = first.split(/\s+[–—|]\s+/);
+  let name: string | undefined;
+  let headline: string | undefined;
+  let bio: string | undefined;
+
+  if (split.length >= 2 && split[0]!.length <= 60) {
+    name = split[0]!.trim();
+    headline = split.slice(1).join(" — ").trim();
+    bio = rest || undefined;
+  } else if (first.length <= 60 && lines.length > 1) {
+    name = first;
+    headline = lines[1];
+    bio = lines.slice(2).join("\n").trim() || undefined;
+  } else if (first.length <= 120) {
+    headline = first;
+    bio = rest || undefined;
+  } else {
+    bio = text.slice(0, 280);
+  }
+
+  if (!bio && headline) {
+    bio = headline.slice(0, 280);
+  } else if (bio) {
+    bio = bio.slice(0, 280);
+  }
 
   return {
     name,
-    school,
     headline,
     bio,
-    avatarUrl: person.profile_pic_url?.startsWith("http")
-      ? person.profile_pic_url
-      : undefined,
-    source: "proxycurl",
-    note: "Imported via Proxycurl. Review before applying to your SWEnder profile.",
+    source: "paste",
+    note: "Parsed from what you pasted. Review before applying.",
   };
 }

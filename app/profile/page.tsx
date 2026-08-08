@@ -217,7 +217,7 @@ type ImportPreview = {
   bio?: string;
   headline?: string;
   avatarUrl?: string;
-  source: "proxycurl" | "open_graph" | "none";
+  source: "open_graph" | "paste" | "none";
   note?: string;
   linkedinUrl: string;
 };
@@ -238,18 +238,34 @@ function LinkedInSection({
   const setLinkedInUrl = useMutation(api.users.setLinkedInUrl);
   const applyImport = useMutation(api.users.applyLinkedInImport);
   const previewImport = useAction(api.linkedin.previewImport);
+  const previewFromPaste = useAction(api.linkedin.previewFromPaste);
 
   const [draft, setDraft] = useState(linkedinUrl ?? "");
+  const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [showPaste, setShowPaste] = useState(false);
   const [applyName, setApplyName] = useState(true);
   const [applySchool, setApplySchool] = useState(true);
   const [applyBio, setApplyBio] = useState(true);
   const [applyAvatar, setApplyAvatar] = useState(false);
+
+  const adoptPreview = (result: ImportPreview) => {
+    setDraft(result.linkedinUrl);
+    setPreview(result.source === "none" ? null : result);
+    setApplyName(Boolean(result.name));
+    setApplySchool(Boolean(result.school));
+    setApplyBio(Boolean(result.bio || result.headline));
+    setApplyAvatar(false);
+    setStatus(result.note ?? "Preview ready — pick what to apply.");
+    if (result.source === "none") {
+      setShowPaste(true);
+    }
+  };
 
   const saveLink = async () => {
     setSaving(true);
@@ -280,18 +296,41 @@ function LinkedInSection({
     setError(null);
     setStatus(null);
     try {
-      // Persist the link before preview so a failed scrape still keeps the URL.
+      // Persist the link before preview so a failed fetch still keeps the URL.
       await setLinkedInUrl({ linkedinUrl: url });
       const result = await previewImport({ linkedinUrl: url });
-      setDraft(result.linkedinUrl);
-      setPreview(result);
-      setApplyName(Boolean(result.name));
-      setApplySchool(Boolean(result.school));
-      setApplyBio(Boolean(result.bio || result.headline));
-      setApplyAvatar(false);
-      setStatus(result.note ?? "Preview ready — pick what to apply.");
+      adoptPreview(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to import from LinkedIn");
+      setShowPaste(true);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const runPasteImport = async () => {
+    const url = draft.trim() || linkedinUrl;
+    if (!url) {
+      setError("Add a LinkedIn URL first");
+      return;
+    }
+    if (!pasteText.trim()) {
+      setError("Paste your LinkedIn headline or About text");
+      return;
+    }
+
+    setImporting(true);
+    setError(null);
+    setStatus(null);
+    try {
+      await setLinkedInUrl({ linkedinUrl: url });
+      const result = await previewFromPaste({
+        linkedinUrl: url,
+        pastedText: pasteText,
+      });
+      adoptPreview(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to parse pasted text");
     } finally {
       setImporting(false);
     }
@@ -314,6 +353,8 @@ function LinkedInSection({
       });
       setStatus("Applied LinkedIn fields to your profile.");
       setPreview(null);
+      setPasteText("");
+      setShowPaste(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to apply import");
     } finally {
@@ -327,8 +368,8 @@ function LinkedInSection({
         linkedin
       </p>
       <p className="mt-2 text-[11px] leading-relaxed tracking-wide text-muted">
-        Add your profile link. Optionally import a public preview into name,
-        school, or bio — you choose what to apply.
+        Add your profile link. Try a public preview import, or paste your
+        headline / About if LinkedIn blocks the fetch — you choose what to apply.
       </p>
       <input
         value={draft}
@@ -358,6 +399,42 @@ function LinkedInSection({
           {importing ? "Importing…" : "Import preview"}
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowPaste((v) => !v)}
+        className="mt-3 text-[11px] tracking-wide text-muted underline-offset-2 hover:text-blush hover:underline"
+      >
+        {showPaste ? "Hide paste import" : "Or paste headline / About"}
+      </button>
+
+      {showPaste && (
+        <div className="mt-3 space-y-2">
+          <textarea
+            value={pasteText}
+            onChange={(e) => {
+              setPasteText(e.target.value);
+              setError(null);
+            }}
+            rows={4}
+            placeholder={"Name — Headline\nYour About text from LinkedIn…"}
+            className="w-full resize-none rounded-xl border border-line bg-card-2 px-4 py-3 text-sm leading-relaxed text-ink placeholder:text-faint focus:border-rose focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => void runPasteImport()}
+            disabled={
+              saving ||
+              importing ||
+              !pasteText.trim() ||
+              (!draft.trim() && !linkedinUrl)
+            }
+            className="w-full rounded-full border border-line-bright py-2.5 text-[11px] tracking-wide text-blush transition hover:border-rose disabled:opacity-40"
+          >
+            {importing ? "Parsing…" : "Parse paste"}
+          </button>
+        </div>
+      )}
 
       {error && (
         <p className="mt-3 text-[11px] leading-relaxed text-rose">{error}</p>
