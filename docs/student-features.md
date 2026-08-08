@@ -278,3 +278,237 @@ Transparent Deny/Request Changes/Accept comments are the product. They must not 
 ---
 
 *v2 addendum is docs-only. Implementation starts after Open Questions are answered (especially discovery). Do not merge this draft until product locks the remaining decisions.*
+
+---
+
+## Hybrid discovery (invented) — "The Triage Board"
+
+**Status:** Invented hybrid to close the discovery open question with a concrete, multi-lane design. Append-only ideation; does not delete prior MVP/v2 text. Still respects locks: PR **Accept / Request Changes / Deny** + **mandatory visible** review comments; **GitHub-linked profiles required**; GitHub signal = **opt-in pins + light public basics** (avatar, bio, top languages, user-selected pins/highlights); **campus = soft boost** (same-campus ranks higher, never a hard wall unless the student MVP distance prefs say otherwise); anti–vibe-coded UI (craft/terminal/editorial — no purple AI-slop dating chrome).
+
+**Diabolical (allowed):** playful SWE-dark humor and sharp mechanics. **Forbidden:** harassment, stalking, non-consensual scraping, doxxing, shadow reputation scores.
+
+### Why a Triage Board (not a swipe deck)
+
+Infinite swipe recreates dopamine debt. A single Weekly Drop is honest but can feel starved. The Triage Board is a **Kanban of intros**: multiple lanes with different intents, one shared **WIP budget**, shared **cooldowns**, and the same review ritual on every card. You triage like an on-call engineer — not like a casino.
+
+### Global WIP & cooldown constitution (applies to ALL lanes)
+
+| Rule | Mechanic |
+|---|---|
+| **Open PR WIP** | Max **3 open PRs** across the whole board (all lanes combined). Opening a 4th is blocked until you Accept / Request Changes / Deny one. |
+| **Chat WIP** | Still max **3 open chats** after merge (student MVP). PR WIP and chat WIP are separate meters; both bite. |
+| **Review tax** | Every decision costs a **Review Token** (see Diabolical engagement systems). Rubber-stamping drains streak; empty comments are impossible. |
+| **Person cooldown** | Deny → **90-day** person cooldown across *all* lanes. Request Changes → person stays on *that* PR only; they cannot reappear as a fresh card in another lane until the thread resolves or expires. |
+| **Lane fairness** | Hotfix cannot starve Merge Train: if Merge Train has an unresolved card past SLA, Hotfix / Chaos pause intake. |
+| **Campus soft boost** | Same-campus candidates sort higher inside a lane; cross-campus still eligible unless user set a hard distance cap in student prefs. |
+| **No infinite scroll** | Lanes show a **finite stack** (cap per lane below). Empty lane ≠ “load more randoms.” It means wait for the next train / refresh window. |
+| **GitHub gate** | No linked GitHub → board is locked. Pins + light public basics render on every PR diff; no co-contributor graph, no shadow dossier. |
+
+### Lane A — Weekly Merge Train (curated 1–3 PRs)
+
+| | |
+|---|---|
+| **Cadence** | Every Monday 09:00 local campus time: **1–3** curated PRs land in `merge-train/`. |
+| **Curation** | Intent match + schedule overlap + soft campus boost + light GitHub pin/language affinity + coding fingerprint. Human-readable **why-this-PR** blurb required on each card. |
+| **Cap** | Max 3 cards/week. Unreviewed train cars block next Monday’s drop (you cannot hoard). |
+| **Diabolical cleverness** | The train does not leave the station until you review. Ghosting the Merge Train is a failing CI check on *you*, not on them. |
+
+### Lane B — Hotfix / Dependabot of Desire (trending public-signal matches)
+
+| | |
+|---|---|
+| **Cadence** | Rolling, but throttled: at most **2 new cards / day**, and only if global WIP < 3. |
+| **Signal** | Opt-in pins + light public basics that *moved* recently (new pin, README tweak the user marked “highlight,” language mix shift) — not stalker scrapes of private activity. |
+| **Cap** | Lane depth max **2** visible. No paginated abyss. |
+| **Diabolical cleverness** | Dependabot PRs are annoying because they are often correct. Hotfix surfaces “annoying but compatible” matches — high signal, low fantasy. Dismissing without a comment is illegal; Dependabot always leaves a note. |
+
+### Lane C — Blame-the-Algorithm chaos mode (opt-in friction matches)
+
+| | |
+|---|---|
+| **Opt-in** | Off by default. Enabling requires typing `I accept merge conflicts in my inbox`. |
+| **Cadence** | At most **1 chaos PR / week**, nights-only delivery (local 21:00–23:00) so it feels like a flaky integration test. |
+| **Matching** | Intentionally *orthogonal*: different agent stack, opposite token-burn band, or complementary pin topics — still intent-compatible and schedule-overlapping. Soft campus boost still applies. |
+| **Cap** | 1 card. If ignored 7 days → auto-close with a system comment: `flaky test timed out`. |
+| **Diabolical cleverness** | Chaos is a controlled experiment, not cruelty. You asked the algorithm to blame itself; it ships one spicy diff and waits for your visible review. |
+
+### Lane D — Office-Hours Walk-ins (availability-first)
+
+| | |
+|---|---|
+| **Cadence** | Live during overlapping Office-Hours windows only. When your free block starts, up to **2 walk-ins** who share that window can appear. |
+| **Matching** | Availability is the primary key; GitHub pins/basics + intent are secondary. Soft campus boost. |
+| **Cap** | 2. Walk-ins expire when the shared window ends (PR auto-closes: `office hours ended`). |
+| **Diabolical cleverness** | Romance with a queue number. If you skip the walk-in, you are skipping a human who is free *right now* — the comment must admit that. |
+
+### Cross-lane state machine (no swipe reincarnation)
+
+```
+[Lane intake] → open PR (counts toward WIP=3)
+     ↓
+Accept (visible comment) ──┐
+Request Changes (visible) ─┼→ thread continues / re-review
+Deny (visible) ────────────┘→ 90-day person cooldown (all lanes)
+
+Merge (mutual Accept) → chat slot (chat WIP=3) → Date Card / meet rails
+```
+
+- A person cannot be in two lanes at once.
+- Moving lanes is impossible; only triage outcomes move state.
+- “See more like this” is forbidden. Use Request Changes to ask for a *specific* patch (“pin your systems repo,” “clarify friends-first”).
+
+### Anti–vibe-coded UX for the board
+
+- Columns labeled like a real triage board (`merge-train`, `dependabot`, `chaos`, `walk-ins`), monospace metadata, editorial serif for names.
+- Status chips only: `open` / `changes requested` / `approved` / `closed` / `merged`.
+- No heart orbs, no purple gradients, no “% twin” glow. Fit shown as a CI matrix: intent · schedule · campus soft-boost · pins/languages · fingerprint.
+
+---
+
+## Feature forge (keep going)
+
+Named features beyond the thin MVP. Each is a mechanic with a reason — not a pun sticker. Ethical bounds: public/consensual GitHub signal only (opt-in pins + light basics), no doxxing, no shadow elo.
+
+### History / changelog
+
+1. **`CHANGELOG.md` Biography** — User-maintained dated entries (`Added` / `Changed` / `Fixed` life events). Clever because reviewers skim changelogs before code; same ritual for people.
+2. **Semantic Version Self** — Profile shows `vMAJOR.MINOR.PATCH` for life phase (major = campus/degree shifts). Diabolical: you must bump version on intent changes or the board labels you `stale manifest`.
+3. **Annotated Tag Memories** — After a merged meet, optionally tag the chat era (`v1.0.0-first-coffee`). Private to you unless both export — archive, not flex.
+4. **Revert-Safe Backstory** — Edits to bio/pins create a diff you can roll back for 7 days. Clever: profiles become reviewable artifacts, not memory-holed rewrites.
+5. **Bisect Night** — Opt-in questionnaire that binary-searches “when did your taste in projects change?” Diabolical: forces narrative honesty without a therapist chatbot.
+
+### Arts / creative-coding
+
+6. **Shader Sunday Gallery** — Pin generative sketches (p5, shaders, demos) as first-class taste signal beside SWE repos. Clever: arts kids stop being emoji hobbies.
+7. **Critique Protocol** — Accept comments on art pins must cite one concrete craft detail (color, motion, constraint). Diabolical: bans “cool lol” rubber stamps on creative work.
+8. **Demo Reel Diff** — Side-by-side before/after of a creative project on the PR card. Clever: progress > polish porn.
+9. **Constraint Jam Pairing** — Date Card template: 90-minute build under a shared constraint (`no frameworks`, `only CSS`). Diabolical: chemistry under compile pressure.
+
+### Ethical forage (public, consented)
+
+10. **Pin Provenance Labels** — Each pin shows `user-selected` vs `auto-suggested from public basics`. Clever: makes curation visible; kills mystery-meat profiles.
+11. **Language Weather Report** — Soft chart of top languages from light public basics, updated on refresh. Diabolical: “it’s giving TypeScript autumn” without scraping private commits.
+12. **README First Paragraph Rule** — PR diff quotes only the first paragraph of a pinned README unless expanded. Clever: respects attention; rewards writers who lead well.
+13. **Issue Taste Sampler** — Opt-in: show up to 3 *public* issues/PRs the user marked as taste samples. Ethical forage with a curator, not a vacuum.
+14. **Forage Firewall** — Hard ban list in product law: no co-contributor graphs, no follower overlaps, no class roster joins, no LinkedIn. Diabolical in the good way: the app refuses delicious stalking features.
+
+### CI/CD romance
+
+15. **Green Build Availability** — Office-Hours windows must be “green” (not Busy, not midterm freeze) before Walk-ins open. Clever: red CI cannot schedule romance.
+16. **Merge Queue for Dates** — Accepted Date Cards enter a personal merge queue ordered by time; conflicts auto-surface. Diabolical: two Friday 7pm coffees become a merge conflict, not a ghosting mystery.
+17. **Required Checks** — Before chat unlock depth increases: both not Busy, intent compatible, ≥1 shared window. Failures explain themselves like CI logs.
+18. **Canary Date** — First meet is always a canary: 20-min walk / library block templates only. Clever: production traffic comes after canary passes.
+19. **Feature Flag Flirting** — Soft prompts (“share Spotify?”) stay behind flags both must enable. Diabolical: no surprise scope creep mid-chat.
+
+### RFC dates & issue trackers
+
+20. **RFC: How I Want to Spend This Quarter** — Short structured doc (goals, bandwidth, dealbreakers). Reviewers must reference it in Accept comments. Clever: forces reading the design doc.
+21. **Issue-Driven Ask** — Instead of “wyd”, open an Issue: `feat: Thursday library block`. Labels: `good first meet`, `needs schedule`, `wontfix`. Diabolical: chat becomes a tracker with states.
+22. **CODEOWNERS Wingpeople** — Opt-in trusted friends who can *suggest* a Merge Train candidate to you (not message them). Clever: human codeowners without outing graphs.
+23. **ADRs for Breakups** — Archive-only Architecture Decision Record when you close a chat (`Context / Decision / Consequences`). Private postmortem culture, not public drama.
+
+### Forks, upstream, dependencies
+
+24. **Fork vs Upstream Intent** — Label whether you want to build something new together (fork) or join their existing life rhythm (upstream). Diabolical: mismatch becomes an explicit Request Changes theme.
+25. **Dependency Hell Matching** — Soft warning when both have Extreme token burn + no shared free windows: `peer dependency conflict`. Clever: names the failure mode before the thread dies.
+26. **Lockfile Honesty** — Onboarding asks what you will *not* negotiate (sleep, research lab nights, religious practice). Surfaced as lockfile entries on the PR. Diabolical: non-negotiables stop being footnotes.
+27. **Semver Expectations** — Mark dating as `^` (flexible) or `~` (narrow). Matcher soft-boosts compatible ranges. Clever: version ranges beat vague bios.
+
+### Flaky tests & blame
+
+28. **Flaky Test Flirting** — If someone Accepts then goes dark <24h without Busy mode, thread gets `flaky` label and a single visible bot nudge. Diabolical: names the flake without public shaming scores.
+29. **git blame Soft Mode** — On Request Changes, you must highlight a *specific* profile hunk (pin, intent, schedule cell). Clever: blame a line, not a soul.
+30. **Stack Trace Intros** — First chat message templates look like stack frames (`at LibraryCoffee.propose()`). Optional, opt-in aesthetic — terminal craft, not emoji soup.
+
+### Release trains & rollbacks
+
+31. **Release Train Meetups** — Campus soft-boosted group study releases (library wings) as optional multi-merge events with WIP caps. Clever: social without drunken mixer energy.
+32. **Rollback After Bad Date** — Either person can `revert` the Date Card outcome within 48h: chat stays, no pressure for date #2; optional private postmortem template. Diabolical: rollback is civilized, not ghost protocol.
+33. **Hotfix Relationship Patch** — Mid-chat, propose a one-line contract patch (“async Sundays only”). Both must Accept. Clever: relationships get patches without ultimatums.
+34. **Deprecation Notice** — Soft wind-down: mark a chat `deprecated` with sunset date before hard close. Diabolical: deprecations are kinder than sudden 404s.
+
+### Stanford / CS seasoning (verified vibes only)
+
+35. **LaIR Energy Mode** — Availability preset inspired by Stanford CS106 **LaIR** helper hours: short, queued, focused help-shaped free blocks (15–30 min). Verified campus pattern; used as schedule metaphor, not an official Stanford integration.
+36. **Coterm Horizon Tag** — Optional tag for students in / considering Stanford **Coterm** (concurrent BS/MS). Soft-boost with peers who marked “long horizon on the Farm.” Verified program; no fake prestige scoring.
+37. **Farm Soft Boost** — “The Farm” as Stanford’s real nickname appears only in Stanford campus pack copy; soft-boost same-campus as already locked. No invented fountain rituals.
+38. **TreeHacks Freeze** — Busy preset for Stanford’s **TreeHacks** (~36h hackathon) and analogous hackathons elsewhere. Verified event; auto-suggest Busy, never auto-punish silence.
+
+### Terminal UX / archive museum
+
+39. **`swender pr checkout` Palette** — Command-palette navigation (`/` opens commands: `review`, `request-changes`, `open-date-card`). Clever: power users triage faster without swipe muscle memory.
+40. **Museum of Closed PRs** — Personal archive of Denied/Expired PRs with *your* visible comments and outcomes. Private museum for pattern recognition — not a public hall of shame.
+41. **TTY Onboarding** — Optional onboarding skin that feels like a setup wizard in a terminal (steps as prompts, not progress hearts). Anti-vibe craft direction.
+42. **Man Page Profiles** — Profile sections as `NAME`, `SYNOPSIS`, `OPTIONS`, `SEE ALSO` (pins). Diabolical: skimmable like real docs; rewards structured humans.
+43. **Pager Duty Couples** — After merge, opt-in shared “on-call” window for text responsiveness expectations. Clever: SLOs for communication without read receipts theater.
+44. **Hex Dump Secrets** — Spoilers for optional fun facts revealed only after mutual Accept (rot13/hex joke). Playful, consensual, not catfishing.
+
+### More diabolical mechanics (keep going)
+
+45. **Reviewer Roulette Opt-out** — Chaos lane cannot re-enable for 14 days after disable (cooldown on the experiment itself). Clever: prevents toggling chaos as a boredom slot machine.
+46. **Monorepo Household Mode** — Post-MVP friends-first: match study groups as a “workspace” with multiple CODEOWNERS. Still no roster stalking.
+47. **Sast of the Heart** — Lightweight copy lint on review comments (blocklist + “attack on appearance” heuristics) before submit. Ethical safety, not shadow scoring of people.
+48. **Artifact Required on Deny** — Deny must include either a template reason code *or* a suggested patch (“try walk-ins Tue 3pm”). Diabolical: pure “no” without a diff is rejected by the form validator.
+49. **Merge Freeze Calendar** — User-declared freezes (midterms, recruit season) publish to the board as lane blackouts. Clever: honesty beats unexplained silence.
+50. **Observability for Self** — Private dashboard: reviews written, rubber-stamp warnings, walk-ins missed, mean time-to-review. Insights for *you* — never a public leaderboard.
+
+---
+
+## Diabolical engagement systems
+
+Systems that **force quality** without harassment. All review comments remain **visible to the PR author**. Rate limits + block/report still apply.
+
+### Review Tokens & LGTM economics
+
+| System | Mechanic | Why it’s sharp |
+|---|---|---|
+| **Review Tokens** | Each Accept / Request Changes / Deny spends 1 token. Regen: +3 on Monday (Merge Train day), +1 daily cap, cannot bank >7. | Finite reviews → triage, not spray. |
+| **LGTM Tax** | Accept with a comment shorter than the rubric minimum costs **2 tokens** and breaks **Quality Streak**. | “LGTM” is expensive; real review is cheaper. |
+| **Rubber-Stamp Detector** | Same Accept template used ≥3 times in 7 days → forced free-text + warning. Streak burns. | Stops template farming. |
+| **Deny Requires a Patch Suggestion** | Deny must include a non-empty `suggestion` field (schedule, intent, pin ask, or `wontfix: <reason code>`). | GitHub-style: request a path forward or own the wontfix. |
+| **Request Changes SLA** | Author has 7 days to patch; reviewer must re-review within 3 days of patch or lose 1 token. | Threads don’t rot in `changes requested` hell. |
+
+### Comment rubrics (mandatory structure, still human)
+
+Visible comments must include:
+
+1. **Hunk reference** — what you looked at (pin, RFC line, schedule overlap, intent).
+2. **Signal** — one concrete observation.
+3. **Decision clause** — why Accept / Request Changes / Deny follows.
+
+Form UX provides three short fields; concatenated body is what the author sees. Empty field → submit disabled.
+
+### Streaks that punish laziness (not silence)
+
+| Streak | Rules |
+|---|---|
+| **Quality Streak** | +1 per day you submit a rubric-complete review. Breaks on rubber-stamp or toxicity block. |
+| **No Ghost Streak** | Breaks if an open PR ages >72h without Busy mode. | Busy mode pauses timers (student MVP respect). |
+| **Chaos Honor** | If Chaos lane enabled, resolving the weekly chaos PR on time boosts Merge Train curation weight next week. |
+
+*No public streak flex. No leaderboards. Private meters only.*
+
+### Anti-harassment coupled to engagement
+
+- Token spend does not bypass rate limits (e.g. max Denies/day).
+- Toxicity / blocklist hit refunds no tokens; may freeze review privileges.
+- Block removes them from all lanes and burns their open PRs toward you as `closed by block`.
+- Visible Deny is allowed; cruel Deny is reportable; reports enter the moderation queue (v2 §E).
+
+### Board health checks (CI for the product)
+
+- If >50% of your weekly decisions are Deny with reason code `wontfix: vibe` → soft prompt to refine intent/filters (not a ban).
+- If Walk-ins expire unread repeatedly → Merge Train size shrinks to 1 until you clear WIP (the board stops overfeeding you).
+- Hotfix pauses if you have any PR `open` >48h (dependabot won’t pile on).
+
+### Locked reminders (do not “creatively” undo)
+
+- Accept / Request Changes / Deny + **mandatory visible** comments
+- GitHub link required; signal = **opt-in pins + light public basics**
+- Campus = **soft boost**
+- No infinite swipe reincarnation via Triage Board rules
+- No harassment / stalking / non-consensual scraping / doxxing / shadow reputation
+
+---
+
+*Append-only creative expansion for draft PR discussion. Docs-only; do not merge to main until product explicitly asks.*
