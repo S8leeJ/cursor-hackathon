@@ -512,3 +512,124 @@ Form UX provides three short fields; concatenated body is what the author sees. 
 ---
 
 *Append-only creative expansion for draft PR discussion. Docs-only; do not merge to main until product explicitly asks.*
+
+---
+
+## Hybrid discovery — The Triage Board (invented)
+
+SWEnder is **NOT** an infinite swipe deck. Discovery is a multi-lane triage board with a **global WIP limit** (default **max 3 open PRs** across all lanes).
+
+This section is an additional, concrete wiring of the hybrid (append-only; earlier Triage Board / forge text above remains). Locks still hold: Accept / Request Changes / Deny + mandatory **visible** review comments; GitHub-linked profiles required; GitHub signal = opt-in pins + light public basics; campus = soft boost only.
+
+### Lanes (coexist)
+
+- **Lane A — Weekly Merge Train:** Monday drop of **1–3** curated PRs against you / for you to open; scarcity. Unreviewed cars block the next train.
+- **Lane B — Hotfix:** Opt-in public-signal forage (pins, languages, star intersection); browse is free-ish, but **opening a PR consumes WIP**.
+- **Lane C — Chaos / Blame-the-Algorithm (opt-in):** Dependency Hell & Merge Conflict matching for friction-seekers. Off by default.
+- **Lane D — Office-Hours Walk-ins:** Availability-first; book a slot like **LaIR**, then open a short **Good-First-Issue** PR. Walk-ins expire when the shared window ends.
+
+### Cross-lane rules (how WIP wires the board together)
+
+| Rule | Behavior |
+|---|---|
+| **Global open-PR WIP** | Max **3** open PRs total across A–D. Lane intake pauses when WIP is full. |
+| **One person, one lane** | A candidate cannot appear in two lanes at once. |
+| **Person cooldown** | Deny → cross-lane cooldown (default 90 days). Request Changes keeps the thread; no duplicate cards elsewhere. |
+| **CI on decisions** | Rubber-stamp Accept without a real comment is **rejected by CI**. Empty Deny / Request Changes also rejected. |
+| **Visibility** | Deny / Request Changes / Accept comments are **visible** to the PR author (GitHub-style). |
+| **Campus** | Soft boost only (sort/rank), not a hard wall unless the user set an explicit distance cap. |
+| **No infinite swipe** | Finite stacks per lane; no “load more randoms.” Empty means wait for the next train / window / Hotfix refresh. |
+| **Lane fairness** | If Merge Train has overdue cars, Hotfix / Chaos intake pauses until the train is triaged. |
+
+### Minimal state machine
+
+```
+Lane intake → open PR (WIP++) → Accept | Request Changes | Deny (visible comment, CI-checked)
+Mutual Accept → Merged → chat (separate chat WIP) → Date Card / meet rails
+Deny → cooldown (all lanes); Request Changes → patch → re-review
+```
+
+---
+
+## Diabolical feature backlog (append)
+
+Paste-forward backlog of **45** named features. Docs-only ideation; ethical bounds unchanged (no stalking, doxxing, non-consensual scraping, or shadow reputation scores).
+
+### Hybrid Multi-Lane Discovery
+
+1. **Lane Switcher** — Profile opens in Hotfix / Docs / Diffs lanes; switching lanes ≠ switching people.
+2. **Sparse Checkout** — First view README + 3 pins; full tree after mutual watch.
+3. **Monorepo Mode** — career / art / hobbies as separately reviewable packages.
+4. **Worktree Dates** — parallel draft intents (coffee / project / mentorship); merge when both agree.
+5. **git sparse-index Filter** — visible compiled match filters (anti-black-box).
+6. **LaIR Queue** — opt-in venue tags (LaIR desk, Farm courtyard, coterm OH) — no GPS trails.
+
+### History / Changelog / Archives
+
+7. **CHANGELOG.md Dating** — mutual bio/bounds edits as Keep-a-Changelog; both can blame.
+8. **Annotated Tag Releases** — milestones as signed tags with dual release notes.
+9. **git stash Feelings** — private notes until you push.
+10. **Reflog (Personal Only)** — your undo history; never theirs.
+11. **Cold Storage Archive** — closed threads exportable read-only; no silent deletes.
+
+### Arts / Creative Coding
+
+12. **Shader Courtship** — GLSL/canvas bio; fork + PR a visual reply.
+13. **Generative Compat Seed** — shared RNG from mutual stars → co-made generative piece.
+14. **ASCII / Terminal Gallery** — less-style pager profiles; ANSI art.
+15. **Live Coding Pair Slot** — 45m kata/sketch; green-pair badge if both push.
+
+### Ethical Forage
+
+16. **Public Commit Weather** — 90d activity shape as weather icon; no hour heatmaps.
+17. **Star Intersection** — shared stars/topics Venn; no private inference.
+18. **CODEOWNERS Affinity** — opt-in ownership paths as taste tags.
+19. **Issue Archaeology** — nominate 1–3 proud public issues only.
+
+### CI/CD Dating Ops
+
+20. **Pipeline of Intent** — Lint→Unit→Integration→Deploy; skips need RFC.
+21. **Required Checks** — Boundaries CI before Accept.
+22. **Flaky Test Protocol** — flaky vibe opens retry issue; no silent ghost.
+23. **Canary Deploy** — 60m first hangout + kill switch; promote to prod calendar.
+24. **Blue/Green Profiles** — stable vs canary bio tracks.
+
+### RFCs / Issues / PRs
+
+25. **Courtship as PR** — (locked core)
+26. **RFC Before Exclusive** — DTR as RFC with 72h comment period.
+27. **Issue Templates for Conflict** — Needs clarification / Scope creep / Blocked on capacity.
+28. **Good First Issue** — low-stakes openers.
+29. **Dependabot for Boundaries** — scheduled “needs outdated?” review.
+
+### Forks / Conflicts / Owners
+
+30. **Friendly Fork** — lifestyle experiments via PR.
+31. **Merge Conflict Ritual** — 3-way merge for calendar/values.
+32. **CODEOWNERS for Topics** — money/travel/family/career ownership.
+33. **Upstream Sync** — quarterly PR to your own profile.
+
+### Canary / Rollback / Postmortems
+
+34. **One-Click Rollback** — roll back last commitment + mandatory postmortem.
+35. **SEV Dating Postmortem** — blameless doc after bad date/fight.
+36. **Feature Flag Affection** — pet names/PDA behind dual toggles.
+37. **Chaos Monday (Opt-In)** — hard-conversation game day.
+
+### Terminal / Campus texture
+
+38. **`~/.swenderrc`** — shared prefs on Accept.
+39. **`man swender-date`** — norms as man page.
+40. **Pager Etiquette** — long messages paginate.
+41. **Coterm Track** — opt-in dual-degree tag.
+42. **Farm Mode** — quiet hours / outdoor-first; no fake check-ins.
+
+### Anti-vibe-coded guards
+
+43. **No Embeddings Cosplay** — ban mystery %; enumerable overlaps only.
+44. **Signed Attestations** — optional prove-you-wrote-this.
+45. **Deny is First-Class Exit** — ghosting disabled by design.
+
+---
+
+*Backlog append for draft PR #2. Docs-only; do not merge to main.*
