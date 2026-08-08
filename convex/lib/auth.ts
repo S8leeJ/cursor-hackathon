@@ -3,6 +3,10 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 type AuthCtx = QueryCtx | MutationCtx;
 
+function clerkIdFromIdentity(identity: { subject: string }): string {
+  return identity.subject;
+}
+
 export async function getCurrentUser(ctx: AuthCtx): Promise<Doc<"users">> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -11,8 +15,8 @@ export async function getCurrentUser(ctx: AuthCtx): Promise<Doc<"users">> {
 
   const user = await ctx.db
     .query("users")
-    .withIndex("by_token", (q) =>
-      q.eq("tokenIdentifier", identity.tokenIdentifier),
+    .withIndex("by_clerkId", (q) =>
+      q.eq("clerkId", clerkIdFromIdentity(identity)),
     )
     .unique();
 
@@ -33,8 +37,8 @@ export async function getCurrentUserOrNull(
 
   return await ctx.db
     .query("users")
-    .withIndex("by_token", (q) =>
-      q.eq("tokenIdentifier", identity.tokenIdentifier),
+    .withIndex("by_clerkId", (q) =>
+      q.eq("clerkId", clerkIdFromIdentity(identity)),
     )
     .unique();
 }
