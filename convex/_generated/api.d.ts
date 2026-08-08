@@ -9,6 +9,10 @@
  */
 
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_fingerprint from "../lib/fingerprint.js";
+import type * as lib_validators from "../lib/validators.js";
+import type * as matching from "../matching.js";
+import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 
 import type {
@@ -19,6 +23,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
+  "lib/fingerprint": typeof lib_fingerprint;
+  "lib/validators": typeof lib_validators;
+  matching: typeof matching;
+  seed: typeof seed;
   users: typeof users;
 }>;
 

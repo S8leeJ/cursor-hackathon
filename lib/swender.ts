@@ -1,185 +1,152 @@
+export type ModelMix = {
+  opus: number;
+  gpt: number;
+  gemini: number;
+};
+
+export type TokenBurnBand = "low" | "medium" | "high" | "extreme";
+
 export type OnboardingAnswers = {
   name: string;
-  age: string;
-  languages: string[];
-  ide: string;
-  tabsOrSpaces: string;
-  workStyle: string;
-  nightOwl: number; // 0-100
-  hotTake: string;
+  school: string;
+  bio: string;
+  preferredAgents: string[];
+  modelMix: ModelMix;
+  typicalTokenBurn: TokenBurnBand | "";
 };
 
 export type Persona = {
   title: string;
   tagline: string;
+  emoji: string;
 };
 
-export const LANGUAGES = [
-  "TypeScript",
-  "Python",
-  "Rust",
-  "Go",
-  "Swift",
-  "C++",
-  "Ruby",
-  "Java",
+export const AGENTS = [
+  { id: "cursor", label: "Cursor", icon: "⬛" },
+  { id: "claude_code", label: "Claude Code", icon: "🟠" },
+  { id: "copilot", label: "Copilot", icon: "🟦" },
+] as const;
+
+export const TOKEN_BURNS: {
+  id: TokenBurnBand;
+  label: string;
+  hint: string;
+}[] = [
+  { id: "low", label: "Low", hint: "Light / occasional (~<50k/day)" },
+  { id: "medium", label: "Medium", hint: "Regular daily (~50–200k)" },
+  { id: "high", label: "High", hint: "Agent-native (~200k–1M)" },
+  { id: "extreme", label: "Extreme", hint: "Context-window athlete (~>1M)" },
 ];
 
-export const IDES = [
-  { id: "vscode", label: "VS Code", icon: "🟦" },
-  { id: "neovim", label: "Neovim", icon: "🟩" },
-  { id: "jetbrains", label: "JetBrains", icon: "🟧" },
-  { id: "cursor", label: "Cursor", icon: "⬛" },
-  { id: "xcode", label: "Xcode", icon: "🔨" },
+export const MODEL_PRESETS: { id: string; label: string; mix: ModelMix }[] = [
+  { id: "opus_heavy", label: "Opus-forward", mix: { opus: 0.7, gpt: 0.2, gemini: 0.1 } },
+  { id: "balanced", label: "Balanced", mix: { opus: 0.34, gpt: 0.33, gemini: 0.33 } },
+  { id: "gpt_heavy", label: "GPT-forward", mix: { opus: 0.2, gpt: 0.65, gemini: 0.15 } },
+  { id: "gemini_heavy", label: "Gemini-curious", mix: { opus: 0.25, gpt: 0.25, gemini: 0.5 } },
 ];
 
 export const DEFAULT_ANSWERS: OnboardingAnswers = {
   name: "",
-  age: "",
-  languages: [],
-  ide: "",
-  tabsOrSpaces: "",
-  workStyle: "",
-  nightOwl: 60,
-  hotTake: "",
+  school: "",
+  bio: "",
+  preferredAgents: [],
+  modelMix: { opus: 0.4, gpt: 0.35, gemini: 0.25 },
+  typicalTokenBurn: "",
 };
 
-export function computePersona(a: OnboardingAnswers): Persona {
-  if (a.ide === "neovim") {
+export function agentLabel(id: string): string {
+  return AGENTS.find((a) => a.id === id)?.label ?? id;
+}
+
+export function burnLabel(band: TokenBurnBand): string {
+  return TOKEN_BURNS.find((b) => b.id === band)?.label ?? band;
+}
+
+export function computePersona(a: {
+  preferredAgents: string[];
+  modelMix: ModelMix;
+  typicalTokenBurn: TokenBurnBand;
+}): Persona {
+  if (a.typicalTokenBurn === "extreme") {
+    return {
+      title: "Context Window Athlete",
+      tagline: "You burn tokens like it's cardio and still ask for one more turn.",
+      emoji: "🔥",
+    };
+  }
+  if (a.preferredAgents.includes("claude_code") && a.modelMix.opus >= 0.5) {
     return {
       title: "Terminal Romantic",
-      tagline:
-        "You build in the dark, with a soft heart and love in every commit.",
+      tagline: "You build in the dark, with Opus in one pane and love in every commit.",
+      emoji: "🖤",
     };
   }
-  if (a.languages.includes("Python") && a.nightOwl >= 70) {
+  if (a.preferredAgents.includes("cursor") && a.typicalTokenBurn === "high") {
     return {
-      title: "GPU Goblin",
-      tagline: "You train models by moonlight and dream in CUDA kernels.",
+      title: "Agent-Native Sweetheart",
+      tagline: "Tab, accept, ship. Your love language is a green diff.",
+      emoji: "✦",
     };
   }
-  if (a.tabsOrSpaces === "tabs") {
+  if (a.modelMix.gpt >= 0.5) {
     return {
       title: "Merge Conflict Menace",
-      tagline: "Chaotic, decisive, and impossible to rebase onto.",
+      tagline: "Decisive, autocomplete-fluent, and impossible to rebase onto.",
+      emoji: "⚡",
     };
   }
-  if (a.workStyle === "remote") {
+  if (a.typicalTokenBurn === "low") {
     return {
       title: "Async Admirer",
-      tagline: "Slow to reply, quick to fall. Your love ships in batches.",
-    };
-  }
-  if (a.nightOwl >= 70) {
-    return {
-      title: "Midnight Deployer",
-      tagline: "You push to prod on Fridays and to hearts on weekends.",
+      tagline: "Slow to reply, quick to fall. Your prompts ship in batches.",
+      emoji: "🌙",
     };
   }
   return {
-    title: "Compile-Time Sweetheart",
-    tagline: "Strictly typed, warmly hearted. No runtime surprises.",
+    title: "Compile-Time Twin",
+    tagline: "Similar agents, similar burn — pair-programming chemistry unlocked.",
+    emoji: "♥",
   };
 }
 
-export type DemoProfile = {
-  id: string;
-  name: string;
-  age: number;
-  persona: string;
-  personaEmoji: string;
-  tags: string[];
-  hotTake: string;
-  gradient: string;
-  initial: string;
-};
-
-export const DEMO_PROFILES: DemoProfile[] = [
-  {
-    id: "alex",
-    name: "Alex",
-    age: 24,
-    persona: "GPU Goblin",
-    personaEmoji: "👾",
-    tags: ["Python", "PyTorch", "Remote"],
-    hotTake: "Good code is poetry. Great code is a love letter to the future.",
-    gradient: "from-[#2a0f16] via-[#3d1420] to-[#12060a]",
-    initial: "A",
-  },
-  {
-    id: "sam",
-    name: "Sam",
-    age: 27,
-    persona: "Terminal Romantic",
-    personaEmoji: "🖤",
-    tags: ["Rust", "Neovim", "Night owl"],
-    hotTake: "If it compiles on the first try, I don't trust it.",
-    gradient: "from-[#1a0e20] via-[#2c1230] to-[#0d0610]",
-    initial: "S",
-  },
-  {
-    id: "riley",
-    name: "Riley",
-    age: 25,
-    persona: "Merge Conflict Menace",
-    personaEmoji: "⚡",
-    tags: ["TypeScript", "React", "Hybrid"],
-    hotTake: "Tabs. And I will die on this hill holding your hand.",
-    gradient: "from-[#20130a] via-[#33200e] to-[#100a05]",
-    initial: "R",
-  },
-  {
-    id: "jordan",
-    name: "Jordan",
-    age: 29,
-    persona: "Async Admirer",
-    personaEmoji: "🌙",
-    tags: ["Go", "Kubernetes", "Remote"],
-    hotTake: "A monorepo is just a long-term relationship with extra steps.",
-    gradient: "from-[#0e1a1c] via-[#132b2c] to-[#060f10]",
-    initial: "J",
-  },
-  {
-    id: "casey",
-    name: "Casey",
-    age: 26,
-    persona: "Midnight Deployer",
-    personaEmoji: "🚀",
-    tags: ["Swift", "iOS", "Coffee-fueled"],
-    hotTake: "Dark mode isn't a preference, it's a personality.",
-    gradient: "from-[#1c0a14] via-[#2e1022] to-[#0e050a]",
-    initial: "C",
-  },
+const GRADIENTS = [
+  "from-[#2a0f16] via-[#3d1420] to-[#12060a]",
+  "from-[#1a0e20] via-[#2c1230] to-[#0d0610]",
+  "from-[#20130a] via-[#33200e] to-[#100a05]",
+  "from-[#0e1a1c] via-[#132b2c] to-[#060f10]",
+  "from-[#1c0a14] via-[#2e1022] to-[#0e050a]",
+  "from-[#12181f] via-[#1c2833] to-[#0a0e12]",
 ];
 
-const ANSWERS_KEY = "swender.answers";
-const LIKES_KEY = "swender.likes";
-
-export function saveAnswers(a: OnboardingAnswers) {
-  localStorage.setItem(ANSWERS_KEY, JSON.stringify(a));
+export function gradientForId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash + id.charCodeAt(i) * (i + 1)) % GRADIENTS.length;
+  }
+  return GRADIENTS[hash] ?? GRADIENTS[0]!;
 }
 
-export function loadAnswers(): OnboardingAnswers | null {
-  try {
-    const raw = localStorage.getItem(ANSWERS_KEY);
-    return raw ? { ...DEFAULT_ANSWERS, ...JSON.parse(raw) } : null;
-  } catch {
-    return null;
-  }
+export function dominantModel(mix: ModelMix): string {
+  const entries: [string, number][] = [
+    ["Opus", mix.opus],
+    ["GPT", mix.gpt],
+    ["Gemini", mix.gemini],
+  ];
+  entries.sort((a, b) => b[1] - a[1]);
+  return entries[0]![0];
 }
 
-export function saveLike(id: string) {
-  const likes = loadLikes();
-  if (!likes.includes(id)) {
-    likes.push(id);
-    localStorage.setItem(LIKES_KEY, JSON.stringify(likes));
-  }
-}
-
-export function loadLikes(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(LIKES_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
+export function fingerprintTags(profile: {
+  preferredAgents: string[];
+  modelMix: ModelMix;
+  typicalTokenBurn: TokenBurnBand;
+  school?: string;
+}): string[] {
+  const tags = [
+    ...profile.preferredAgents.map(agentLabel),
+    dominantModel(profile.modelMix),
+    `${burnLabel(profile.typicalTokenBurn)} burn`,
+  ];
+  if (profile.school) tags.push(profile.school);
+  return tags;
 }

@@ -20,8 +20,8 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "SWEnder — Find your compile-time match",
-  description: "Dating for people who ship.",
+  title: "Token Twin — Find your compile-time match",
+  description: "Match college SEs by AI coding fingerprint.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

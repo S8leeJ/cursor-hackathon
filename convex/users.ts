@@ -1,27 +1,15 @@
 import { v } from "convex/values";
 import { getCurrentUser, getCurrentUserOrNull } from "./lib/auth";
+import {
+  assertFingerprintComplete,
+  normalizeModelMix,
+} from "./lib/fingerprint";
+import { userDocValidator } from "./lib/validators";
 import { mutation, query } from "./_generated/server";
 import {
   modelMixValidator,
   tokenBurnBandValidator,
 } from "./schema";
-
-const userReturnValidator = v.object({
-  _id: v.id("users"),
-  _creationTime: v.number(),
-  clerkId: v.string(),
-  name: v.string(),
-  email: v.optional(v.string()),
-  school: v.optional(v.string()),
-  bio: v.optional(v.string()),
-  avatarUrl: v.optional(v.string()),
-  preferredAgents: v.optional(v.array(v.string())),
-  modelMix: v.optional(modelMixValidator),
-  typicalTokenBurn: v.optional(tokenBurnBandValidator),
-  hasFingerprint: v.boolean(),
-  createdAt: v.number(),
-  updatedAt: v.optional(v.number()),
-});
 
 /** Get-or-create the app profile for the current Clerk user. */
 export const store = mutation({
@@ -62,7 +50,7 @@ export const store = mutation({
 
 export const current = query({
   args: {},
-  returns: v.union(userReturnValidator, v.null()),
+  returns: v.union(userDocValidator, v.null()),
   handler: async (ctx) => {
     return await getCurrentUserOrNull(ctx);
   },
@@ -70,8 +58,62 @@ export const current = query({
 
 export const me = query({
   args: {},
-  returns: userReturnValidator,
+  returns: userDocValidator,
   handler: async (ctx) => {
     return await getCurrentUser(ctx);
+  },
+});
+
+/** Save profile + AI coding fingerprint (completes onboarding). */
+export const completeOnboarding = mutation({
+  args: {
+    name: v.string(),
+    school: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    preferredAgents: v.array(v.string()),
+    modelMix: modelMixValidator,
+    typicalTokenBurn: tokenBurnBandValidator,
+  },
+  returns: userDocValidator,
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    const name = args.name.trim();
+    if (name.length < 1) {
+      throw new Error("Name is required");
+    }
+
+    assertFingerprintComplete(
+      args.preferredAgents,
+      args.modelMix,
+      args.typicalTokenBurn,
+    );
+
+    const preferredAgents = [
+      ...new Set(args.preferredAgents.map((a) => a.trim()).filter(Boolean)),
+    ];
+    if (preferredAgents.length === 0) {
+      throw new Error("Pick at least one preferred agent");
+    }
+
+    const modelMix = normalizeModelMix(args.modelMix);
+    const school = args.school?.trim() || undefined;
+    const bio = args.bio?.trim() || undefined;
+
+    await ctx.db.patch(user._id, {
+      name,
+      school,
+      bio,
+      preferredAgents,
+      modelMix,
+      typicalTokenBurn: args.typicalTokenBurn,
+      hasFingerprint: true,
+      updatedAt: Date.now(),
+    });
+
+    const updated = await ctx.db.get(user._id);
+    if (!updated) {
+      throw new Error("User not found after update");
+    }
+    return updated;
   },
 });

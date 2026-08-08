@@ -19,14 +19,16 @@ export default function Landing() {
         <span className="mx-1 text-rose">♥</span>
         {"}"}
       </p>
-      <h1 className="mt-2 font-serif text-5xl text-ink">SWEnder</h1>
+      <h1 className="mt-2 font-serif text-5xl text-ink">Token Twin</h1>
 
       <h2 className="mt-10 font-serif text-4xl leading-tight text-ink float-up">
         Find your
         <br />
         compile-time <span className="italic text-rose">match</span>
       </h2>
-      <p className="mt-3 text-sm text-muted">Dating for people who ship.</p>
+      <p className="mt-3 text-sm text-muted">
+        Match college SEs by AI coding fingerprint.
+      </p>
 
       {/* Decorative hero: two devs, one glowing terminal */}
       <div className="relative mt-10 w-full flex-1 overflow-hidden rounded-3xl border border-line bg-gradient-to-b from-[#1d0b11] via-[#2a0f18] to-[#12060a]">
