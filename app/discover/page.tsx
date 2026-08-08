@@ -38,6 +38,15 @@ const FLY_MS = 380;
 type ReviewAction = "accept" | "deny" | "request_changes";
 type ExitDir = "left" | "right" | "up";
 
+const EXIT_TRANSFORM: Record<
+  ExitDir,
+  { x: number; y: number; rotate: number }
+> = {
+  left: { x: -520, y: 90, rotate: -22 },
+  right: { x: 520, y: 90, rotate: 22 },
+  up: { x: 0, y: -560, rotate: -4 },
+};
+
 type PublicCandidate = {
   _id: Id<"users">;
   name: string;
@@ -88,10 +97,11 @@ export default function Discover() {
 
   const [localPassed, setLocalPassed] = useState<Id<"users">[]>([]);
   const [exiting, setExiting] = useState<ExitDir | null>(null);
+  const [exitOpacity, setExitOpacity] = useState(1);
   const [matchFlash, setMatchFlash] = useState<string | null>(null);
   const [changesFlash, setChangesFlash] = useState<string | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
-  const [drag, setDrag] = useState({ x: 0, y: 0, active: false });
+  const [drag, setDrag] = useState({ x: 0, y: 0, rotate: 0, active: false });
   const dragRef = useRef({
     pointerId: null as number | null,
     startX: 0,
@@ -100,6 +110,7 @@ export default function Discover() {
     y: 0,
   });
   const busyRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   const deck = useMemo(() => {
     if (!candidates) return [];
@@ -107,7 +118,6 @@ export default function Discover() {
   }, [candidates, localPassed]);
 
   const profile = deck[0];
-  const nextProfile = deck[1];
 
   const finishReview = useCallback(
     async (
@@ -121,10 +131,38 @@ export default function Discover() {
       if (busyRef.current) return;
       busyRef.current = true;
       setRequestOpen(false);
-      setExiting(
-        action === "accept" ? "right" : action === "deny" ? "left" : "up",
-      );
-      setDrag({ x: 0, y: 0, active: false });
+
+      const dir: ExitDir =
+        action === "accept" ? "right" : action === "deny" ? "left" : "up";
+      const fly = EXIT_TRANSFORM[dir];
+      const fromX = dragRef.current.x;
+      const fromY = dragRef.current.y;
+
+      // Phase 1: lock the release pose with transitions armed (no snap-to-center).
+      setExiting(dir);
+      setDrag({
+        x: fromX,
+        y: fromY,
+        rotate: fromX * 0.06,
+        active: false,
+      });
+      dragRef.current.x = 0;
+      dragRef.current.y = 0;
+
+      // Phase 2: after paint, animate to the off-screen target.
+      requestAnimationFrame(() => {
+        setDrag({ x: fly.x, y: fly.y, rotate: fly.rotate, active: false });
+        setExitOpacity(0);
+      });
+
+      // Advance the deck on the animation clock — don't stall on the network.
+      window.setTimeout(() => {
+        setLocalPassed((ids) => [...ids, target._id]);
+        setExiting(null);
+        setExitOpacity(1);
+        setDrag({ x: 0, y: 0, rotate: 0, active: false });
+        busyRef.current = false;
+      }, FLY_MS);
 
       try {
         const result = await review({
@@ -143,12 +181,6 @@ export default function Discover() {
       } catch {
         // keep card out of local deck even if network flakes; query will refresh
       }
-
-      window.setTimeout(() => {
-        setLocalPassed((ids) => [...ids, target._id]);
-        setExiting(null);
-        busyRef.current = false;
-      }, FLY_MS);
     },
     [review],
   );
@@ -173,7 +205,7 @@ export default function Discover() {
       y: 0,
     };
     e.currentTarget.setPointerCapture(e.pointerId);
-    setDrag({ x: 0, y: 0, active: true });
+    setDrag({ x: 0, y: 0, rotate: 0, active: true });
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -182,24 +214,40 @@ export default function Discover() {
     const y = (e.clientY - dragRef.current.startY) * 0.55;
     dragRef.current.x = x;
     dragRef.current.y = y;
-    setDrag({ x, y, active: true });
+
+    // Coalesce pointer moves to one React update per frame.
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const { x: dx, y: dy } = dragRef.current;
+      setDrag({ x: dx, y: dy, rotate: dx * 0.06, active: true });
+    });
   };
 
   const endDrag = (pointerId: number) => {
     if (dragRef.current.pointerId !== pointerId || !profile) return;
     const { x, y } = dragRef.current;
     dragRef.current.pointerId = null;
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
 
     if (y <= -UP_THRESHOLD && Math.abs(y) > Math.abs(x)) {
+      dragRef.current.x = 0;
+      dragRef.current.y = 0;
       setRequestOpen(true);
-      setDrag({ x: 0, y: 0, active: false });
+      setDrag({ x: 0, y: 0, rotate: 0, active: false });
       return;
     }
     if (Math.abs(x) >= SWIPE_THRESHOLD) {
+      // leave dragRef x/y for finishReview to continue from release pose
       void finishReview(x > 0 ? "accept" : "deny", profile);
       return;
     }
-    setDrag({ x: 0, y: 0, active: false });
+    dragRef.current.x = 0;
+    dragRef.current.y = 0;
+    setDrag({ x: 0, y: 0, rotate: 0, active: false });
   };
 
   // Keyboard: ← deny, → accept, ↑ request changes
@@ -285,7 +333,10 @@ export default function Discover() {
   }
 
   const dragProgress = Math.min(
-    Math.max(Math.abs(drag.x) / SWIPE_THRESHOLD, Math.abs(Math.min(drag.y, 0)) / UP_THRESHOLD),
+    Math.max(
+      Math.abs(drag.x) / SWIPE_THRESHOLD,
+      Math.abs(Math.min(drag.y, 0)) / UP_THRESHOLD,
+    ),
     1,
   );
   const intent: ExitDir | null =
@@ -299,15 +350,17 @@ export default function Discover() {
             : "left"
           : null
       : null);
-  const rotate = exiting ? 0 : drag.x * 0.06;
-  const cardStyle = exiting
-    ? undefined
-    : {
-        transform: `translate(${drag.x}px, ${drag.y}px) rotate(${rotate}deg)`,
-        transition: drag.active
-          ? "none"
-          : "transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)",
-      };
+  const cardStyle = {
+    transform: `translate3d(${drag.x}px, ${drag.y}px, 0) rotate(${drag.rotate}deg)`,
+    opacity: exitOpacity,
+    transition: drag.active
+      ? "none"
+      : exiting
+        ? `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease-out`
+        : "transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)",
+    willChange: drag.active || exiting ? ("transform" as const) : undefined,
+    pointerEvents: exiting ? ("none" as const) : undefined,
+  };
 
   return (
     <Shell>
@@ -346,18 +399,21 @@ export default function Discover() {
       </div>
 
       <div className="relative mt-5 flex flex-1">
-        {nextProfile && (
+        {/* Under-card first so React can promote it by key when the top flies off. */}
+        {deck[1] && (
           <div
-            className={`absolute inset-0 overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(nextProfile._id)} transition-transform duration-300`}
+            key={deck[1]._id}
+            className={`absolute inset-0 overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(deck[1]._id)}`}
             style={{
-              transform: exiting
-                ? "scale(1)"
-                : `scale(${0.94 + dragProgress * 0.04})`,
-              opacity: 0.85 + dragProgress * 0.15,
+              transform: `scale(${exiting ? 1 : 0.94 + dragProgress * 0.04})`,
+              opacity: exiting ? 1 : 0.85 + dragProgress * 0.15,
+              transition: drag.active
+                ? "none"
+                : `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease-out`,
             }}
             aria-hidden
           >
-            <CardFace profile={nextProfile} muted />
+            <CardFace profile={deck[1]} muted />
           </div>
         )}
 
@@ -367,15 +423,7 @@ export default function Discover() {
           onPointerMove={onPointerMove}
           onPointerUp={(e) => endDrag(e.pointerId)}
           onPointerCancel={(e) => endDrag(e.pointerId)}
-          className={`relative flex w-full flex-1 cursor-grab touch-none select-none flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(profile._id)} active:cursor-grabbing ${
-            exiting === "left"
-              ? "swipe-fly-left"
-              : exiting === "right"
-                ? "swipe-fly-right"
-                : exiting === "up"
-                  ? "swipe-fly-up"
-                  : "float-up"
-          }`}
+          className={`relative z-10 flex w-full flex-1 cursor-grab touch-none select-none flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(profile._id)} active:cursor-grabbing`}
           style={cardStyle}
         >
           <div

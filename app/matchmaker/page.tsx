@@ -56,6 +56,10 @@ export default function MatchmakerPage() {
   const [threadError, setThreadError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  /** Show typing until a new visible assistant turn appears after this index. */
+  const [awaitingAfterCount, setAwaitingAfterCount] = useState<number | null>(
+    null,
+  );
   const [lastPromptMessageId, setLastPromptMessageId] = useState<string | null>(
     null,
   );
@@ -97,21 +101,42 @@ export default function MatchmakerPage() {
   const visiblePending =
     pending && !answeredToolIds.includes(pending.toolCallId) ? pending : null;
 
+  // generateReply runs async after send — keep iMessage dots until a new
+  // assistant turn (text / search summary) or a questionnaire appears.
+  const showTyping =
+    !visiblePending &&
+    (sending ||
+      (awaitingAfterCount !== null &&
+        !hasNewAssistantSince(messages ?? [], awaitingAfterCount)));
+
+  useEffect(() => {
+    if (visiblePending) setAwaitingAfterCount(null);
+  }, [visiblePending]);
+
+  useEffect(() => {
+    if (awaitingAfterCount === null) return;
+    if (hasNewAssistantSince(messages ?? [], awaitingAfterCount)) {
+      setAwaitingAfterCount(null);
+    }
+  }, [messages, awaitingAfterCount]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages?.length, visiblePending?.toolCallId, draft]);
+  }, [messages?.length, visiblePending?.toolCallId, draft, showTyping]);
 
   const send = async (text: string) => {
     if (!threadId || sending) return;
     const prompt = text.trim();
     if (!prompt) return;
     setSending(true);
+    setAwaitingAfterCount(messages?.length ?? 0);
     setDraft("");
     try {
       const { messageId } = await sendMessage({ threadId, prompt });
       setLastPromptMessageId(messageId);
     } catch (e) {
       setDraft(prompt);
+      setAwaitingAfterCount(null);
       setThreadError(e instanceof Error ? e.message : "Send failed");
     } finally {
       setSending(false);
@@ -136,6 +161,7 @@ export default function MatchmakerPage() {
   ) => {
     if (!threadId || !visiblePending) return;
     setAnsweredToolIds((ids) => [...ids, visiblePending.toolCallId]);
+    setAwaitingAfterCount(messages?.length ?? 0);
     try {
       await submitQuestionnaire({
         threadId,
@@ -147,6 +173,7 @@ export default function MatchmakerPage() {
       setAnsweredToolIds((ids) =>
         ids.filter((id) => id !== visiblePending.toolCallId),
       );
+      setAwaitingAfterCount(null);
       setThreadError(
         e instanceof Error ? e.message : "Failed to submit answers",
       );
@@ -204,10 +231,10 @@ export default function MatchmakerPage() {
           <p className="mt-10 text-center text-xs tracking-wide text-muted">
             Spinning up your thread…
           </p>
-        ) : (messages?.length ?? 0) === 0 ? (
+        ) : (messages?.length ?? 0) === 0 && !showTyping ? (
           <Welcome onPick={(t) => void send(t)} disabled={sending} />
         ) : (
-          messages!.map((msg) => (
+          (messages ?? []).map((msg) => (
             <MessageBubble key={msg.key} message={msg} />
           ))
         )}
@@ -218,6 +245,8 @@ export default function MatchmakerPage() {
             onSubmit={(answers) => void onSubmitAnswers(answers)}
           />
         )}
+
+        {showTyping && <TypingBubble />}
 
         {status === "LoadingMore" && (
           <p className="text-center text-[10px] text-faint">Loading earlier…</p>
@@ -296,6 +325,67 @@ function Welcome({
   );
 }
 
+function messageText(message: {
+  text?: string;
+  parts: Array<{ type: string; text?: string; [k: string]: unknown }>;
+}): string {
+  if (message.text?.trim()) return message.text;
+  return message.parts
+    .filter((p) => p.type === "text" && typeof p.text === "string")
+    .map((p) => p.text)
+    .join("");
+}
+
+function isAssistantTurnVisible(message: {
+  role: string;
+  text?: string;
+  status?: string;
+  parts: Array<{ type: string; text?: string; [k: string]: unknown }>;
+}): boolean {
+  if (message.role !== "assistant") return false;
+  return (
+    messageText(message).trim().length > 0 ||
+    hasVisibleToolSummary(message.parts)
+  );
+}
+
+function hasNewAssistantSince(
+  messages: Array<{
+    role: string;
+    text?: string;
+    status?: string;
+    parts: Array<{ type: string; text?: string; [k: string]: unknown }>;
+  }>,
+  afterCount: number,
+): boolean {
+  for (let i = afterCount; i < messages.length; i++) {
+    if (isAssistantTurnVisible(messages[i]!)) return true;
+  }
+  return false;
+}
+
+function TypingBubble() {
+  return (
+    <div
+      className="float-up flex justify-start"
+      aria-live="polite"
+      aria-label="Matchmaker is typing"
+    >
+      <div className="rounded-2xl rounded-bl-md border border-line bg-card px-4 py-3">
+        <p className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.25em] text-rose">
+          <BotIcon className="h-3 w-3" />
+          matchmaker
+        </p>
+        <div className="flex h-4 items-center gap-1.5 px-0.5">
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-rose" />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-rose" />
+          <span className="typing-dot h-1.5 w-1.5 rounded-full bg-rose" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({
   message,
 }: {
@@ -308,12 +398,7 @@ function MessageBubble({
   };
 }) {
   const isUser = message.role === "user";
-  const text =
-    message.text ||
-    message.parts
-      .filter((p) => p.type === "text" && typeof p.text === "string")
-      .map((p) => p.text)
-      .join("");
+  const text = messageText(message);
 
   // Hide pure tool-result / empty assistant shells
   if (!isUser && !text.trim() && !hasVisibleToolSummary(message.parts)) {
@@ -335,9 +420,6 @@ function MessageBubble({
           <p className="mb-1.5 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.25em] text-rose">
             <BotIcon className="h-3 w-3" />
             matchmaker
-            {message.status === "streaming" && (
-              <span className="ml-1 animate-pulse text-faint">typing</span>
-            )}
           </p>
         )}
         {text.trim() ? (
