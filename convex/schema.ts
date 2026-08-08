@@ -80,6 +80,11 @@ export default defineSchema({
     school: v.optional(v.string()),
     bio: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    /**
+     * User-supplied LinkedIn profile URL (self-link only).
+     * Used for display + optional consentful self-import — not for matching forage.
+     */
+    linkedinUrl: v.optional(v.string()),
 
     /** Multi-select agents; prefer "cursor" | "claude_code" | "copilot", allow other strings. */
     preferredAgents: v.optional(v.array(v.string())),

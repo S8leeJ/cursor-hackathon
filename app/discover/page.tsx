@@ -53,6 +53,7 @@ type PublicCandidate = {
   school?: string;
   bio?: string;
   avatarUrl?: string;
+  linkedinUrl?: string;
   preferredAgents: string[];
   modelMix: { opus: number; gpt: number; gemini: number };
   typicalTokenBurn: "low" | "medium" | "high" | "extreme";
@@ -745,6 +746,17 @@ function CardFace({
             </span>
           )}
         </p>
+        {profile.linkedinUrl && !muted && (
+          <a
+            href={profile.linkedinUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="inline-block text-[11px] tracking-wide text-blush underline-offset-2 hover:text-rose hover:underline"
+          >
+            LinkedIn →
+          </a>
+        )}
         <span className="inline-block rounded-full bg-wine px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-ink">
           {persona.title}
         </span>
