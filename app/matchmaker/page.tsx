@@ -42,6 +42,7 @@ type PendingQuestionnaire = {
 export default function MatchmakerPage() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const ensureThread = useMutation(api.chat.ensureThread);
+  const clearHistory = useMutation(api.chat.clearHistory);
   const sendMessage = useMutation(api.chat.sendMessage).withOptimisticUpdate(
     (store, args) => {
       optimisticallySendMessage(api.chat.listMessages)(store, {
@@ -56,6 +57,7 @@ export default function MatchmakerPage() {
   const [threadError, setThreadError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [clearing, setClearing] = useState(false);
   /** Show typing until a new visible assistant turn appears after this index. */
   const [awaitingAfterCount, setAwaitingAfterCount] = useState<number | null>(
     null,
@@ -149,6 +151,27 @@ export default function MatchmakerPage() {
     void send(draft);
   };
 
+  const onClearHistory = async () => {
+    if (clearing || sending) return;
+    setClearing(true);
+    setThreadError(null);
+    try {
+      const { threadId: id } = await clearHistory({});
+      setThreadId(id);
+      setAnsweredToolIds([]);
+      setAwaitingAfterCount(null);
+      setLastPromptMessageId(null);
+      setDraft("");
+    } catch (e) {
+      setThreadError(
+        e instanceof Error ? e.message : "Failed to clear chat history",
+      );
+    } finally {
+      setClearing(false);
+      inputRef.current?.focus();
+    }
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -215,9 +238,19 @@ export default function MatchmakerPage() {
             RAG over campus profiles · ask, pick, get matched
           </p>
         </div>
-        <span className="rounded-full border border-line-bright px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-rose">
-          agent
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void onClearHistory()}
+            disabled={!threadId || clearing || sending}
+            className="rounded-full border border-line-bright px-3 py-1.5 text-[10px] tracking-wide text-muted transition hover:border-rose hover:text-rose disabled:opacity-40"
+          >
+            {clearing ? "Clearing…" : "Clear chat"}
+          </button>
+          <span className="rounded-full border border-line-bright px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-rose">
+            agent
+          </span>
+        </div>
       </header>
 
       {threadError && (

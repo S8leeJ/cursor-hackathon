@@ -12,7 +12,7 @@
 - Privacy Defaults — no mutuals, no who-viewed-you, no public scores.
 
 ## Matching
-- Token Twin Matching — match on agents/models/token-usage fingerprint.
+- SWEnder Matching — match on agents/models/token-usage fingerprint.
 - Merge Conflict — opt-in worst-stack / rival-tech pairing.
 - Dependency Hell — match chronically overcommitted people.
 - Semantic Versioning — intent as major/minor/patch compatibility.

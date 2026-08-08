@@ -18,7 +18,7 @@ export default function Landing() {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-6 py-12 text-center">
       <BracketHeart className="h-8 w-16 text-ink" />
       <h1 className="mt-3 font-serif text-5xl tracking-tight text-ink">
-        Token Twin
+        SWEnder
       </h1>
 
       <h2 className="mt-10 font-serif text-[2.6rem] leading-[1.15] text-ink float-up">

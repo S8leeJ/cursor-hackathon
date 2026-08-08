@@ -129,7 +129,7 @@ export default function Onboarding() {
       {/* Header */}
       <div className="flex items-center justify-center gap-2.5">
         <HeartIcon filled className="h-4 w-4 text-rose" />
-        <span className="font-serif text-2xl text-ink">Token Twin</span>
+        <span className="font-serif text-2xl text-ink">SWEnder</span>
       </div>
 
       {/* Progress */}

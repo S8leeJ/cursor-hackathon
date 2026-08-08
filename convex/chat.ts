@@ -90,6 +90,49 @@ export const ensureThread = mutation({
   },
 });
 
+/**
+ * Wipe Matchmaker history: point the user at a fresh agent thread and
+ * asynchronously delete the previous one.
+ */
+export const clearHistory = mutation({
+  args: {},
+  returns: v.object({ threadId: v.string() }),
+  handler: async (ctx): Promise<{ threadId: string }> => {
+    const user = await getCurrentUser(ctx);
+    const existing = await ctx.db
+      .query("matchChats")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .unique();
+
+    const threadId = await createThread(ctx, components.agent, {
+      userId: user._id,
+      title: "Matchmaker",
+    });
+
+    if (existing) {
+      const oldThreadId = existing.threadId;
+      await ctx.db.patch(existing._id, {
+        threadId,
+        updatedAt: Date.now(),
+      });
+      // First page + self-schedules until the old thread is gone.
+      await ctx.runMutation(
+        components.agent.threads.deleteAllForThreadIdAsync,
+        { threadId: oldThreadId },
+      );
+    } else {
+      await ctx.db.insert("matchChats", {
+        userId: user._id,
+        threadId,
+        title: "Matchmaker",
+        updatedAt: Date.now(),
+      });
+    }
+
+    return { threadId };
+  },
+});
+
 export const listMessages = query({
   args: {
     threadId: v.string(),

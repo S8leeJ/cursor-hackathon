@@ -61,7 +61,7 @@ export default function Wrapped() {
   });
 
   const share = async () => {
-    const text = `I'm a ${persona.title} on Token Twin — ${burnLabel(typicalTokenBurn)} burn, ${dominantModel(modelMix)}-forward. Find your compile-time match.`;
+    const text = `I'm a ${persona.title} on SWEnder — ${burnLabel(typicalTokenBurn)} burn, ${dominantModel(modelMix)}-forward. Find your compile-time match.`;
     if (navigator.share) {
       await navigator.share({ text }).catch(() => {});
     } else {
@@ -77,7 +77,7 @@ export default function Wrapped() {
       <div className="flex items-center justify-between">
         <HeartIcon className="h-4 w-4 text-rose" />
         <p className="text-sm tracking-wide text-ink">
-          Token Twin <span className="text-rose">Wrapped</span>
+          SWEnder <span className="text-rose">Wrapped</span>
         </p>
         <span className="text-blush">✦</span>
       </div>

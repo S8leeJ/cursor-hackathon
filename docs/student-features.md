@@ -260,7 +260,7 @@ Transparent Deny/Request Changes/Accept comments are the product. They must not 
 *Draft PR awaits answers. Locked items above are not listed again (including comment visibility = visible to author).*
 
 1. **Discovery (blocking):** What is the **hybrid discovery** model? Weekly Drop only, rolling PR inbox, user-browsable public-signal search, or a hybrid? *(Awaiting user’s explanation — leave unspecified in MVP engineering until answered.)*
-2. **Brand:** Ship as **SWEnder** everywhere, or keep **Token Twin** as fingerprint/sub-brand?
+2. **Brand:** Ship as **SWEnder** everywhere.
 3. **Queue / cadence policy:** If hybrid, how do Weekly Drop and any browse/search lanes share WIP and cooldowns?
 4. **Request Changes semantics:** Who must act next — author updates profile/availability/pins, reviewer re-reviews, or either? Max rounds before auto-close? Does Request Changes consume a weekly (or hybrid) slot?
 5. **Min comment length / quality:** Character minimum only, or soft checks against empty template submits?

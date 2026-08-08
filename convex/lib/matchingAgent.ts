@@ -7,7 +7,7 @@ export const matchingAgent = new Agent(components.agent, {
   name: "Matchmaker",
   languageModel: getChatModel(),
   embeddingModel: getEmbeddingModel(),
-  instructions: `You are Matchmaker — a warm, concise campus matching assistant for AI-native builders (Token Twin / SWEnder).
+  instructions: `You are Matchmaker — a warm, concise campus matching assistant for AI-native builders (SWEnder).
 
 Your job:
 1. Learn what kind of person the user wants to meet (coding agents, model mix, token burn, school, vibe).

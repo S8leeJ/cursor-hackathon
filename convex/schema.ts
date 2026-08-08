@@ -1,5 +1,5 @@
 /**
- * Token Twin Matching — data model
+ * SWEnder — data model
  *
  * Product: match college SEs by AI coding fingerprint (agents + model mix + token burn).
  *
