@@ -96,8 +96,14 @@ export default function Discover() {
   const review = useMutation(api.matching.swipe);
 
   const [localPassed, setLocalPassed] = useState<Id<"users">[]>([]);
-  const [exiting, setExiting] = useState<ExitDir | null>(null);
-  const [exitOpacity, setExitOpacity] = useState(1);
+  const [flyaway, setFlyaway] = useState<{
+    profile: PublicCandidate;
+    dir: ExitDir;
+    fromX: number;
+    fromY: number;
+    fromRotate: number;
+    flying: boolean;
+  } | null>(null);
   const [matchFlash, setMatchFlash] = useState<string | null>(null);
   const [changesFlash, setChangesFlash] = useState<string | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
@@ -118,6 +124,8 @@ export default function Discover() {
   }, [candidates, localPassed]);
 
   const profile = deck[0];
+  const nextProfile = deck[1];
+  const busy = flyaway !== null;
 
   const finishReview = useCallback(
     async (
@@ -134,33 +142,27 @@ export default function Discover() {
 
       const dir: ExitDir =
         action === "accept" ? "right" : action === "deny" ? "left" : "up";
-      const fly = EXIT_TRANSFORM[dir];
       const fromX = dragRef.current.x;
       const fromY = dragRef.current.y;
+      const fromRotate = fromX * 0.06;
 
-      // Phase 1: lock the release pose with transitions armed (no snap-to-center).
-      setExiting(dir);
-      setDrag({
-        x: fromX,
-        y: fromY,
-        rotate: fromX * 0.06,
-        active: false,
+      // Ghost flies away; deck advances immediately underneath at rest —
+      // avoids the old card + next card both animating transforms.
+      setFlyaway({
+        profile: target,
+        dir,
+        fromX,
+        fromY,
+        fromRotate,
+        flying: false,
       });
+      setLocalPassed((ids) => [...ids, target._id]);
+      setDrag({ x: 0, y: 0, rotate: 0, active: false });
       dragRef.current.x = 0;
       dragRef.current.y = 0;
 
-      // Phase 2: after paint, animate to the off-screen target.
-      requestAnimationFrame(() => {
-        setDrag({ x: fly.x, y: fly.y, rotate: fly.rotate, active: false });
-        setExitOpacity(0);
-      });
-
-      // Advance the deck on the animation clock — don't stall on the network.
       window.setTimeout(() => {
-        setLocalPassed((ids) => [...ids, target._id]);
-        setExiting(null);
-        setExitOpacity(1);
-        setDrag({ x: 0, y: 0, rotate: 0, active: false });
+        setFlyaway(null);
         busyRef.current = false;
       }, FLY_MS);
 
@@ -186,7 +188,7 @@ export default function Discover() {
   );
 
   const doReview = (action: ReviewAction) => {
-    if (!profile || busyRef.current || exiting) return;
+    if (!profile || busyRef.current || busy) return;
     if (action === "request_changes") {
       setRequestOpen(true);
       return;
@@ -195,7 +197,7 @@ export default function Discover() {
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (busyRef.current || exiting || requestOpen) return;
+    if (busyRef.current || busy || requestOpen) return;
     if (e.button !== 0) return;
     dragRef.current = {
       pointerId: e.pointerId,
@@ -241,7 +243,6 @@ export default function Discover() {
       return;
     }
     if (Math.abs(x) >= SWIPE_THRESHOLD) {
-      // leave dragRef x/y for finishReview to continue from release pose
       void finishReview(x > 0 ? "accept" : "deny", profile);
       return;
     }
@@ -250,10 +251,19 @@ export default function Discover() {
     setDrag({ x: 0, y: 0, rotate: 0, active: false });
   };
 
+  // After the ghost paints at the release pose, kick the fly-out transition.
+  useEffect(() => {
+    if (!flyaway || flyaway.flying) return;
+    const id = requestAnimationFrame(() => {
+      setFlyaway((prev) => (prev ? { ...prev, flying: true } : prev));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [flyaway]);
+
   // Keyboard: ← deny, → accept, ↑ request changes
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!profile || busyRef.current || exiting) return;
+      if (!profile || busyRef.current || busy) return;
       if (requestOpen) {
         if (e.key === "Escape") setRequestOpen(false);
         return;
@@ -271,7 +281,7 @@ export default function Discover() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [profile, exiting, finishReview, requestOpen]);
+  }, [profile, busy, finishReview, requestOpen]);
 
   if (authLoading || (isAuthenticated && me === undefined)) {
     return (
@@ -319,7 +329,7 @@ export default function Discover() {
     );
   }
 
-  if (!profile) {
+  if (!profile && !flyaway) {
     return (
       <Shell>
         <Empty
@@ -332,6 +342,7 @@ export default function Discover() {
     );
   }
 
+  const shown = profile ?? flyaway?.profile;
   const dragProgress = Math.min(
     Math.max(
       Math.abs(drag.x) / SWIPE_THRESHOLD,
@@ -340,7 +351,7 @@ export default function Discover() {
     1,
   );
   const intent: ExitDir | null =
-    exiting ??
+    flyaway?.dir ??
     (drag.active
       ? drag.y < -28 && Math.abs(drag.y) > Math.abs(drag.x)
         ? "up"
@@ -352,15 +363,27 @@ export default function Discover() {
       : null);
   const cardStyle = {
     transform: `translate3d(${drag.x}px, ${drag.y}px, 0) rotate(${drag.rotate}deg)`,
-    opacity: exitOpacity,
-    transition: drag.active
-      ? "none"
-      : exiting
-        ? `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease-out`
+    // No transition while a ghost is flying — prevents the promoted next card
+    // from tweening scale→translate (the "double swipe" look).
+    transition:
+      drag.active || busy
+        ? "none"
         : "transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)",
-    willChange: drag.active || exiting ? ("transform" as const) : undefined,
-    pointerEvents: exiting ? ("none" as const) : undefined,
+    willChange: drag.active ? ("transform" as const) : undefined,
   };
+  const fly = flyaway ? EXIT_TRANSFORM[flyaway.dir] : null;
+  const flyawayStyle =
+    flyaway && fly
+      ? {
+          transform: flyaway.flying
+            ? `translate3d(${fly.x}px, ${fly.y}px, 0) rotate(${fly.rotate}deg)`
+            : `translate3d(${flyaway.fromX}px, ${flyaway.fromY}px, 0) rotate(${flyaway.fromRotate}deg)`,
+          opacity: flyaway.flying ? 0 : 1,
+          transition: flyaway.flying
+            ? `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease-out`
+            : "none",
+        }
+      : undefined;
 
   return (
     <Shell>
@@ -386,7 +409,7 @@ export default function Discover() {
         </div>
         <div className="flex items-center gap-3">
           <span className="rounded-full border border-line-bright px-3 py-1.5 font-mono text-[11px] text-rose">
-            open · {Math.round(profile.matchScore * 100)}% fit
+            open · {shown ? `${Math.round(shown.matchScore * 100)}% fit` : "…"}
           </span>
           <button
             type="button"
@@ -398,60 +421,89 @@ export default function Discover() {
         </div>
       </div>
 
-      <div className="relative mt-5 flex flex-1">
-        {/* Under-card first so React can promote it by key when the top flies off. */}
-        {deck[1] && (
+      <div className="relative mt-5 flex flex-1 overflow-hidden">
+        {nextProfile && (
           <div
-            key={deck[1]._id}
-            className={`absolute inset-0 overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(deck[1]._id)}`}
+            key={nextProfile._id}
+            className={`absolute inset-0 overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(nextProfile._id)}`}
             style={{
-              transform: `scale(${exiting ? 1 : 0.94 + dragProgress * 0.04})`,
-              opacity: exiting ? 1 : 0.85 + dragProgress * 0.15,
-              transition: drag.active
-                ? "none"
-                : `transform ${FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${FLY_MS}ms ease-out`,
+              transform: `scale(${0.94 + dragProgress * 0.04})`,
+              opacity: 0.85 + dragProgress * 0.15,
+              transition: drag.active ? "none" : "transform 0.2s ease-out, opacity 0.2s ease-out",
             }}
             aria-hidden
           >
-            <CardFace profile={deck[1]} muted />
+            <CardFace profile={nextProfile} muted />
           </div>
         )}
 
-        <div
-          key={profile._id}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={(e) => endDrag(e.pointerId)}
-          onPointerCancel={(e) => endDrag(e.pointerId)}
-          className={`relative z-10 flex w-full flex-1 cursor-grab touch-none select-none flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(profile._id)} active:cursor-grabbing`}
-          style={cardStyle}
-        >
+        {profile && (
           <div
-            className="pointer-events-none absolute inset-0 z-20 flex items-start justify-between px-6 pt-14"
+            key={profile._id}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={(e) => endDrag(e.pointerId)}
+            onPointerCancel={(e) => endDrag(e.pointerId)}
+            className={`relative z-10 flex w-full flex-1 cursor-grab touch-none select-none flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(profile._id)} active:cursor-grabbing`}
+            style={cardStyle}
+          >
+            <div
+              className="pointer-events-none absolute inset-0 z-20 flex items-start justify-between px-6 pt-14"
+              aria-hidden
+            >
+              <Stamp
+                label="ACCEPT"
+                tone="accept"
+                visible={intent === "right" && !flyaway}
+                strength={dragProgress}
+              />
+              <Stamp
+                label="DENY"
+                tone="deny"
+                visible={intent === "left" && !flyaway}
+                strength={dragProgress}
+              />
+              <Stamp
+                label="REQUEST CHANGES"
+                tone="changes"
+                visible={intent === "up" && !flyaway}
+                strength={dragProgress}
+              />
+            </div>
+
+            <CardFace profile={profile} />
+          </div>
+        )}
+
+        {flyaway && (
+          <div
+            className={`pointer-events-none absolute inset-0 z-30 flex flex-col overflow-hidden rounded-3xl border border-line bg-gradient-to-b ${gradientForId(flyaway.profile._id)}`}
+            style={flyawayStyle}
             aria-hidden
           >
-            <Stamp
-              label="ACCEPT"
-              tone="accept"
-              visible={intent === "right"}
-              strength={exiting === "right" ? 1 : dragProgress}
-            />
-            <Stamp
-              label="DENY"
-              tone="deny"
-              visible={intent === "left"}
-              strength={exiting === "left" ? 1 : dragProgress}
-            />
-            <Stamp
-              label="REQUEST CHANGES"
-              tone="changes"
-              visible={intent === "up"}
-              strength={exiting === "up" ? 1 : dragProgress}
-            />
+            <div className="absolute inset-0 z-20 flex items-start justify-between px-6 pt-14">
+              <Stamp
+                label="ACCEPT"
+                tone="accept"
+                visible={flyaway.dir === "right"}
+                strength={1}
+              />
+              <Stamp
+                label="DENY"
+                tone="deny"
+                visible={flyaway.dir === "left"}
+                strength={1}
+              />
+              <Stamp
+                label="REQUEST CHANGES"
+                tone="changes"
+                visible={flyaway.dir === "up"}
+                strength={1}
+              />
+            </div>
+            <CardFace profile={flyaway.profile} />
           </div>
-
-          <CardFace profile={profile} />
-        </div>
+        )}
       </div>
 
       <div className="mt-5 flex items-center justify-center gap-5">
