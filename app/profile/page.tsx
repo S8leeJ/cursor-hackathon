@@ -30,18 +30,21 @@ export default function Profile() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const me = useQuery(api.users.current, isAuthenticated ? {} : "skip");
 
-  const ready =
-    me?.hasFingerprint &&
-    me.preferredAgents &&
-    me.modelMix &&
-    me.typicalTokenBurn;
+  const fingerprint =
+    me?.hasFingerprint && me.preferredAgents && me.modelMix && me.typicalTokenBurn
+      ? {
+          preferredAgents: me.preferredAgents,
+          modelMix: me.modelMix,
+          typicalTokenBurn: me.typicalTokenBurn,
+        }
+      : null;
 
   return (
     <AppShell
       path="~/profile"
-      branch={ready ? `feat/${handleOf(me.name)}` : "main"}
+      branch={me && fingerprint ? `feat/${handleOf(me.name)}` : "main"}
       status={
-        ready ? (
+        fingerprint ? (
           <span className="text-added">fingerprint synced</span>
         ) : undefined
       }
@@ -57,7 +60,7 @@ export default function Profile() {
           href="/sign-in"
           cta="Sign in"
         />
-      ) : !ready ? (
+      ) : !me || !fingerprint ? (
         <EmptyState
           glyph={<UserIcon className="h-5 w-5" />}
           code="404 fingerprint not found"
