@@ -148,43 +148,40 @@ Build after MVP retention is proven. Not blockers.
 
 **Status:** draft product addendum on `feat/swe-native-features`. Awaits answers in Open Questions below. Does not delete or supersede the student MVP above — it reframes the discovery/match mechanic in SWE terms and locks several product decisions.
 
-**Relationship to sections above:** Keep student constraints (`.edu`, campus/distance, Office-Hours overlap, Weekly Drop cadence, 3-chat WIP, Date Card, Busy mode, safety, hide-from-classmates, privacy defaults). Replace the *interaction shape* of discovery: not swipe, not silent Pass/Like — a **code-review metaphor** end to end.
+**Relationship to sections above:** Keep student constraints (`.edu`, campus/distance, Office-Hours overlap, 3-chat WIP, Date Card, Busy mode, safety, hide-from-classmates, privacy defaults). Replace silent Pass/Like with a **code-review metaphor**. **Discovery cadence/shape** (Weekly Drop vs hybrid vs rolling queue) remains an **Open Question** until the user’s hybrid discovery explanation lands — do not treat Weekly Drop as locked in v2.
 
 ### Locked decisions (do not reopen without explicit product change)
 
 | Decision | Lock |
 |---|---|
-| Core mechanic | Matching is **Pull Requests**, not swipes |
+| Core mechanic | Matching decisions are **Pull Request reviews**, not swipes |
 | Review outcomes | Exactly three: **Accept** / **Request Changes** / **Deny** |
 | Review comments | **Mandatory** on every decision (Accept, Request Changes, and Deny) — engagement + signal |
-| Identity | **GitHub-linked profiles required** (in addition to student `.edu` / campus verify from MVP above) |
-| GitHub signal (assumed for now; user skipped deeper debate) | **Opt-in pinned repos/highlights** + **light public basics** only: top languages, avatar, bio. **No** deep co-contributor graph, no stalker enrichment, no private data |
+| GitHub identity (MVP hard constraint) | Profiles **MUST** link GitHub via **OAuth / verified GitHub link**. No GitHub → cannot complete onboarding or enter the match pool. Non-negotiable. |
+| Public GitHub signal | **Public signal matters** and is first-class in profile + matching: **repos**, **contribution graph**, **READMEs**, and **issues/PRs as taste signal**. Design the profile “diff” and match rationale around that signal (still public-only; no private-repo access). |
+| Co-contributor graph | Still **out** unless explicitly reopened: no “people you may know from repos,” no collaborator stalking graphs. Public artifacts ≠ social graph enrichment. |
+
+*Supersedes the earlier v2 assumption of “light basics + opt-in pins only.” Pins/highlights may still help curation, but MVP profile/matching is built on richer **public** GitHub signal as locked above.*
 
 ### Design thesis (v2)
 
-The product surface should feel like reviewing a PR: profile as diff, decision as review, mutual Accept as merge, Busy as red CI, chats as WIP-limited branches. If a control would work unchanged on a swipe app with a terminal skin, reject it.
+The product surface should feel like reviewing a PR: profile as diff (student fields + **public GitHub evidence**), decision as review, mutual Accept as merge, Busy as red CI, chats as WIP-limited branches. Taste is inferred from what someone ships and how they participate in public issues/PRs — not from photo carousels.
 
-**Anti–vibe-coded UI (v2):** Prefer craft / editorial / terminal review UI (status chips, comment threads, CI-style breakdowns). Avoid purple AI-slop dating chrome, heart-orb primary actions, and “% twin” gamification. Show fit as a checklist/matrix (intent, schedule, fingerprint, optional GitHub pins) — not romance glow.
+**Anti–vibe-coded UI (v2):** Prefer craft / editorial / terminal review UI (status chips, comment threads, repo/README excerpts, contribution graph as a calm chart — not a flex badge farm). Avoid purple AI-slop dating chrome, heart-orb primary actions, and “% twin” gamification. Show fit as a checklist/matrix (intent, schedule, fingerprint, GitHub signal breakdown) — not romance glow.
 
 ### MVP delta (tight) — ship on top of student MVP
 
-Ship only what makes the PR loop real. Defer biography-as-`git log`, Issues/RFCs, archives, creative-coding tracks, and campus place packs until the review loop retains.
+Ship GitHub-required identity + public-signal profiles + the three-outcome PR review loop. Defer biography-as-authored-`git log`, in-app Issues/RFCs for courtship, personal archives, creative-coding tracks, and campus place packs until the review loop retains. **Do not lock discovery UX** beyond “not swipe” until Open Question #1 is answered.
 
-#### A. PR inbox replaces swipe deck
+#### A. Decision UX: three-outcome review + mandatory comment
 
-| | |
-|---|---|
-| **Problem** | Silent Pass/Like trains zero-signal engagement. |
-| **Mechanism** | `/discover` (or renamed route — Open Question) becomes an **inbox of open PRs**. Each candidate is a PR: profile diff (student fields + coding fingerprint + optional GitHub pins/basics + schedule overlap + why-this-PR). Queue stays **Weekly Drop**: one curated PR/week until resolved (aligned with student MVP §4). |
-| **SWE why** | Reviews enter a queue; you do not infinite-scroll diffs for dopamine. |
-
-#### B. Three-outcome review + mandatory comment
+*(How candidates arrive — Weekly Drop vs hybrid discovery — is Open Question #1. Whatever the inbox shape, every decision uses this review model.)*
 
 | Outcome | Meaning (product) | Typical next state |
 |---|---|---|
 | **Accept** | Approve this intro | Counts toward mutual merge; opens chat slot when both Accept (subject to 3-chat cap) |
-| **Request Changes** | Interested, but not merge-ready | PR stays open / returns with a clear ask (e.g. different meet window, clarify intent). Not a silent maybe. |
-| **Deny** | Close without merge | Cooldown (student MVP: 90 days). No match. |
+| **Request Changes** | Interested, but not merge-ready | PR stays open / returns with a clear ask (e.g. different meet window, clarify intent, “want to see a pinned systems repo”). Not a silent maybe. |
+| **Deny** | Close without merge | Cooldown (student MVP default: 90 days, unless discovery policy changes it). No match. |
 
 **Hard rules (MVP):**
 
@@ -195,63 +192,76 @@ Ship only what makes the PR loop real. Defer biography-as-`git log`, Issues/RFCs
 
 **Comment starters (illustrative):**
 
-- Accept: “Schedule + intent look compatible — want to propose a Date Card.”
-- Request Changes: “Interested if we can overlap a weekday Office-Hours block,” “Clarify friends-first vs dating.”
-- Deny: “Intent mismatch,” “No schedule overlap this quarter,” “Not looking for this collaboration energy.”
+- Accept: “Liked the README taste + schedule overlap — want to propose a Date Card.”
+- Request Changes: “Interested if we can overlap a weekday Office-Hours block,” “Clarify friends-first vs dating,” “Would love a pin on the project you actually care about.”
+- Deny: “Intent mismatch,” “No schedule overlap this quarter,” “Public work isn’t the kind of collaboration I’m looking for.”
 
-#### C. GitHub-linked profile (required) + light signal
+#### B. GitHub OAuth / link — non-negotiable in MVP
 
 | | |
 |---|---|
-| **Problem** | SWE students already publish signal on GitHub; inventing a second identity is weaker and less trustworthy. |
-| **Mechanism** | Account requires GitHub link (already the auth path on `main`). Profile may show **avatar, bio, top languages** (light public basics) and **user-selected pinned repos/highlights** (opt-in). Nothing else in MVP. |
-| **Explicitly out** | Co-contributor / collaborator graphs, “people you may know from repos,” org membership stalking, LinkedIn scrape, private contribution reconstruction. |
-| **SWE why** | Review the diff they chose to show — not a shadow dossier. |
+| **Problem** | Without GitHub, SWEnder collapses into a generic campus dating profile with a terminal font. |
+| **Mechanism** | **GitHub OAuth (or equivalent verified GitHub account link) is required** to finish onboarding and to be eligible for matching. Aligns with current `main` (GitHub-only auth) and hardens it as product law: unlink / missing GitHub → blocked from the pool. `.edu` / campus verify from student MVP still applies alongside GitHub. |
+| **SWE why** | The profile is a review of public engineering identity, not a blank bio card. |
+
+#### C. Profile + matching designed around public GitHub signal
+
+| | |
+|---|---|
+| **Problem** | Self-description lies; public repos, contribution graph, READMEs, and issue/PR behavior are higher-bandwidth taste signal for SWE students. |
+| **Mechanism (MVP)** | Profile / PR diff surfaces **public** GitHub evidence as first-class sections, e.g.: selected or ranked **repos**; **contribution graph** (activity rhythm, not a vanity scoreboard); **README** excerpts / project summaries; recent or representative **issues & PRs** as taste (how they write, what they care about, review tone). Matching may use this signal for ranking/rationale blurbs (“why this PR”) together with intent, campus, schedule overlap, and coding fingerprint. |
+| **Consent / ethics** | Public-only. Disclose in onboarding what we read and show. User can choose highlights/pins to emphasize, but cannot fake “no GitHub.” No private repos, no non-consensual social-graph expansion, no LinkedIn scrape. |
+| **Explicitly out (unless reopened)** | Deep **co-contributor / collaborator graphs**, “people you may know from repos,” org-membership stalking, reconstructing private activity. |
+| **SWE why** | You review the artifact and the trail — READMEs and issue threads are the cover letter. |
 
 #### D. Wire into existing student rails (no expansion)
 
-- Matcher still requires intent compatibility + Office-Hours overlap before a PR enters the weekly inbox.
+- Intent compatibility + Office-Hours overlap remain gates before someone is worth a review (regardless of discovery shape).
 - Mutual Accept → chat under **max 3 open chats**; Date Card / first-meet templates / Busy / safety / hide-from-classmates / privacy defaults unchanged from student MVP.
-- Coding fingerprint (agents / model mix / token burn) remains on the PR diff as structured fields — not a “% twin” badge.
+- Coding fingerprint (agents / model mix / token burn) remains on the PR diff as structured fields — not a “% twin” badge — and sits **beside** GitHub public signal, not instead of it.
 
 ### Post-MVP (v2 only — after PR loop retains)
 
 | Idea | Notes |
 |---|---|
-| Commit History as biography | User-authored timeline; optional pin of public highlights |
+| Commit History as biography | User-authored timeline layered on top of public GitHub trail |
 | Issues / RFCs for slow courtship | Propose meets as Issues; quarter-intent as short RFC |
 | Personal archives | Private notes on closed PRs / meets — not public reputation |
 | Creative coding track | Arts/generative work as first-class interest, not emoji chip |
-| Ethical forage expansion | Only with consent + disclosure; still no co-contributor graph unless explicitly reopened |
+| Richer forage controls | Finer user controls over which public artifacts appear; still no co-contributor graph unless reopened |
 
 ### Fit with current codebase (v2 delta)
 
 | Today | v2 change |
 |---|---|
-| `/discover` swipe + `matching.swipe` like/pass | PR inbox + Accept / Request Changes / Deny + required comment; persist reviews in Convex |
+| GitHub-only Clerk auth | Keep; document as **hard MVP requirement** for profile + match eligibility |
+| Profile = name/school/bio + AI fingerprint | Add public GitHub signal sections (repos, contribution graph, README/issue-PR taste) on profile and on the PR diff |
+| `/discover` swipe + `matching.swipe` like/pass | Replace decision UX with Accept / Request Changes / Deny + required comment; **discovery/inbox shape TBD** (Open Question) |
 | Mutual like = match | Mutual **Accept** + comments = **Merged** |
-| GitHub auth only | Keep required; add opt-in pins + light public basics on profile/PR diff |
 | Heart / Pass / Super like chrome | Review actions + status chips; kill swipe romance as primary UX |
 
 ### Open questions (remaining product decisions)
 
 *Draft PR awaits answers. Locked items above are not listed again.*
 
-1. **Brand:** Ship as **SWEnder** everywhere, or keep **Token Twin** as fingerprint/sub-brand?
-2. **Queue policy:** Confirm **one Weekly Drop PR** vs. small rolling review queue (e.g. max 3 open PRs) while keeping student cadence philosophy?
-3. **Request Changes semantics:** Who must act next — author updates profile/availability, reviewer re-reviews, or either? Max rounds before auto-close? Does Request Changes consume the weekly slot?
-4. **Request Changes visibility:** Is the comment always visible to the other person (true review thread), or only after they re-open / respond?
-5. **Deny comment visibility:** Full comment, redacted reason category, or closed with no body shown?
-6. **Accept comment visibility:** On merge immediately, or gated until Date Card?
-7. **Min comment length / quality:** Character minimum only, or soft checks against empty template submits?
-8. **Date Card vs. chat:** Full chat on merge, or Date Card required to unlock long-form messaging?
-9. **Launch campus:** Stanford, UT Austin (current seeds), or multi-campus day one? (Campus-specific copy stays behind packs.)
-10. **Fingerprint weight:** Primary match signal vs. secondary to intent + schedule + interests (+ optional pins)?
-11. **Moderation of review comments:** Blocklist, report-only, or assist for harassment especially on Deny / Request Changes?
-12. **Route rename:** Keep `/discover` or move to `/pulls` / `/inbox`?
-13. **Super-priority PR:** Any “request review ASAP” analogue, or explicitly none under Weekly Drop?
-14. **Light GitHub basics source of truth:** Live fetch on view vs. snapshot at onboarding/refresh — and what if bio/languages change?
+1. **Discovery (blocking):** What is the **hybrid discovery** model? Weekly Drop only, rolling PR inbox, user-browsable public-signal search, or a hybrid? *(Awaiting user’s explanation — leave unspecified in MVP engineering until answered.)*
+2. **Brand:** Ship as **SWEnder** everywhere, or keep **Token Twin** as fingerprint/sub-brand?
+3. **Queue / cadence policy:** If hybrid, how do Weekly Drop and any browse/search lanes share WIP and cooldowns?
+4. **Request Changes semantics:** Who must act next — author updates profile/availability/pins, reviewer re-reviews, or either? Max rounds before auto-close? Does Request Changes consume a weekly (or hybrid) slot?
+5. **Request Changes visibility:** Is the comment always visible to the other person (true review thread), or only after they re-open / respond?
+6. **Deny comment visibility:** Full comment, redacted reason category, or closed with no body shown?
+7. **Accept comment visibility:** On merge immediately, or gated until Date Card?
+8. **Min comment length / quality:** Character minimum only, or soft checks against empty template submits?
+9. **Date Card vs. chat:** Full chat on merge, or Date Card required to unlock long-form messaging?
+10. **Launch campus:** Stanford, UT Austin (current seeds), or multi-campus day one? (Campus-specific copy stays behind packs.)
+11. **Signal weights:** Relative weight of GitHub public signal vs intent + schedule + interests vs AI coding fingerprint?
+12. **Which GitHub artifacts by default:** Auto-pick top repos / recent PRs vs require user curation of pins before entering the pool?
+13. **Contribution graph presentation:** Raw GitHub-style graph, abstracted activity bands, or both? Avoid shame UX for sparse graphs (research-heavy / new frosh).
+14. **Moderation of review comments:** Blocklist, report-only, or assist for harassment especially on Deny / Request Changes?
+15. **Route rename:** Keep `/discover` or move to `/pulls` / `/inbox`?
+16. **Refresh / source of truth:** Live GitHub fetch on view vs snapshot on onboarding/refresh — staleness policy when README/repos change?
+17. **Super-priority PR:** Any “request review ASAP” analogue, or explicitly none?
 
 ---
 
-*v2 addendum is docs-only. Implementation starts after Open Questions are answered. Do not merge this draft until product locks the remaining decisions.*
+*v2 addendum is docs-only. Implementation starts after Open Questions are answered (especially discovery). Do not merge this draft until product locks the remaining decisions.*
